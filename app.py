@@ -1,9 +1,10 @@
+from sqlalchemy import Float
 from flask import Flask, redirect, render_template, url_for, request, flash, g, session
 from datetime import date
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Integer, String, Date, Text, Boolean
+from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
 
 import random
 import string
@@ -26,14 +27,122 @@ db.init_app(app)
 # user pass: kMw
 
 
-class users(db.Model):
-    __tablename__ = 'users'
+class Users(db.Model):
+    __tablename__ = 'Users'
     id = db.Column(Integer, primary_key=True, autoincrement=True)
-    name = db.Column(String(100))
-    email = db.Column(String(100))
-    password = db.Column(Text)
-    is_active = db.Column(Boolean)
-    is_admin = db.Column(Boolean)
+    name = db.Column(String(100), nullable=False)
+    email = db.Column(String(100), nullable=False, unique=True)
+    password = db.Column(Text, nullable=False)
+    is_active = db.Column(Boolean, default=False)
+    is_admin = db.Column(Boolean, default=False)
+
+
+class GuestTokens(db.Model):
+    __tablename__ = 'GuestTokens'
+    token_id = db.Column(Integer, primary_key=True, autoincrement=True)
+    is_active = db.Column(Boolean, default=False)
+    created_at = db.Column(DateTime, default=datetime.now)
+
+
+class Movies(db.Model):
+    __tablename__ = 'Movies'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    title = db.Column(String(255), nullable=False)
+    duration = db.Column(Integer, nullable=False)
+    director = db.Column(String(100))
+    description = db.Column(Text)
+
+
+class Rooms(db.Model):
+    __tablename__ = 'Rooms'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    name = db.Column(String(100), nullable=False)
+    capacity = db.Column(Integer, nullable=False)
+
+
+class RoomSections(db.Model):
+    __tablename__ = 'RoomSections'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    room_id = db.Column(Integer, db.ForeignKey('Rooms.id'), nullable=False)
+    room = db.relationship(
+        'Rooms', backref=db.backref('roomsections', lazy=True))
+    section_type = db.Column(String(50), nullable=False)
+    capacity = db.Column(Integer, nullable=False)
+    num_rows = db.Column(Integer, nullable=False)
+    seats_per_row = db.Column(Integer, nullable=False)
+    price_multiplier = db.Column(Integer, nullable=False)
+
+
+class Seats(db.Model):
+    __tablename__ = 'Seats'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    room_section_id = db.Column(Integer, db.ForeignKey(
+        'RoomSections.id'), nullable=False)
+    room_section = db.relationship(
+        'RoomSections', backref=db.backref('seats', lazy=True))
+    row_number = db.Column(Integer, nullable=False)
+    seat_number = db.Column(Integer, nullable=False)
+
+
+class Showtimes(db.Model):
+    __tablename__ = 'Showtimes'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    movie_id = db.Column(Integer, db.ForeignKey('Movies.id'), nullable=False)
+    movie = db.relationship(
+        'Movies', backref=db.backref('showtimes', lazy=True))
+    room_id = db.Column(Integer, db.ForeignKey('Rooms.id'), nullable=False)
+    room = db.relationship('Rooms', backref=db.backref('showtimes', lazy=True))
+    start_time = db.Column(DateTime, nullable=False)
+    end_time = db.Column(DateTime, nullable=False)
+
+
+class Bookings(db.Model):
+    __tablename__ = 'Bookings'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(Integer, db.ForeignKey('Users.id'), nullable=False)
+    user = db.relationship('Users', backref=db.backref('bookings', lazy=True))
+    token_id = db.Column(Integer, db.ForeignKey('GuestTokens.token_id'))
+    token = db.relationship(
+        'GuestTokens', backref=db.backref('bookings', lazy=True))
+    showtime_id = db.Column(Integer, db.ForeignKey(
+        'Showtimes.id'), nullable=False)
+    showtime = db.relationship(
+        'Showtimes', backref=db.backref('bookings', lazy=True))
+    seat_id = db.Column(Integer, db.ForeignKey('Seats.id'), nullable=False)
+    seat = db.relationship('Seats', backref=db.backref('bookings', lazy=True))
+    status = db.Column(String(20))
+    created_at = db.Column(DateTime, default=datetime.now)
+
+
+class RoomBookings(db.Model):
+    __tablename__ = 'RoomBookings'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    room_id = db.Column(Integer, db.ForeignKey('Rooms.id'), nullable=False)
+    room = db.relationship(
+        'Rooms', backref=db.backref('room_bookings', lazy=True))
+    user_id = db.Column(Integer, db.ForeignKey('Users.id'), nullable=False)
+    user = db.relationship(
+        'Users', backref=db.backref('room_bookings', lazy=True))
+    start_time = db.Column(DateTime, nullable=False)
+    end_time = db.Column(DateTime, nullable=False)
+    status = db.Column(String(20))
+    created_at = db.Column(DateTime, default=datetime.now)
+
+
+class Payments(db.Model):
+    __tablename__ = 'Payments'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    booking_id = db.Column(Integer, db.ForeignKey('Bookings.id'))
+    booking = db.relationship(
+        'Bookings', backref=db.backref('payments', lazy=True))
+    room_booking_id = db.Column(Integer, db.ForeignKey('RoomBookings.id'))
+    room_booking = db.relationship(
+        'RoomBookings', backref=db.backref('payments', lazy=True))
+    amount = db.Column(Float, nullable=False)
+    status = db.Column(String(20))
+    payment_method = db.Column(String(50))
+    transaction_id = db.Column(String(100))
+    created_at = db.Column(DateTime, default=datetime.now)
 
 
 class UserPass:
@@ -74,7 +183,7 @@ class UserPass:
         self.password = random_password
 
     def login_user(self):
-        user_record = users.query.filter(users.name == self.user).first()
+        user_record = Users.query.filter(Users.name == self.user).first()
 
         if user_record is not None and self.verify_password(user_record.password, self.password):
             session['user'] = user_record.name
@@ -87,7 +196,7 @@ class UserPass:
             return None
 
     def get_user_info(self):
-        db_user = users.query.filter(users.name == self.user).first()
+        db_user = Users.query.filter(Users.name == self.user).first()
 
         if db_user == None:
             self.is_valid = False
@@ -141,8 +250,8 @@ def logout():
 def init_app():
     db.create_all()
 
-    active_admins = users.query.filter(
-        users.is_active == True, users.is_admin == True).count()
+    active_admins = Users.query.filter(
+        Users.is_active == True, Users.is_admin == True).count()
 
     if active_admins > 0:
         flash('Application is already set-up. Nothing to do')
@@ -151,7 +260,7 @@ def init_app():
     user_pass = UserPass()
     user_pass.get_random_user_password()
 
-    new_admin = users(name=user_pass.user, email='noone@nowhere.no',
+    new_admin = Users(name=user_pass.user, email='noone@nowhere.no',
                       password=user_pass.hash_password(), is_active=True, is_admin=True)  # type: ignore
     db.session.add(new_admin)
     db.session.commit()
@@ -182,10 +291,10 @@ def register():
         user['email'] = '' if 'email' not in request.form else request.form['email']
         user['user_pass'] = '' if 'user_pass' not in request.form else request.form['user_pass']
 
-        is_user_name_unique = (users.query.filter(
-            users.name == user['user_name']).count() == 0)
-        is_user_email_unique = (users.query.filter(
-            users.name == user['email']).count() == 0)
+        is_user_name_unique = (Users.query.filter(
+            Users.name == user['user_name']).count() == 0)
+        is_user_email_unique = (Users.query.filter(
+            Users.name == user['email']).count() == 0)
 
         if user['user_name'] == '':
             message = 'Name cannot be empty'
@@ -203,7 +312,7 @@ def register():
             user_pass = UserPass(user['user_name'], user['user_pass'])
             password_hash = user_pass.hash_password()
 
-            new_user = users(name=user['user_name'], email=user['email'], password=password_hash,
+            new_user = Users(name=user['user_name'], email=user['email'], password=password_hash,
                              is_active=True, is_admin=False)  # type: ignore
             db.session.add(new_user)
             db.session.commit()
