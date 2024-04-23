@@ -1,0 +1,37 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='index' }}" aria-current="page"
+                    href="{{ url_for('index') }}">Home </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='repertoire' }}" aria-current="page"
+                    href="{{ url_for('repertoire') }}">Repertoire</a>
+            </li>
+            {% if 'user' in session and session['is_admin'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='users' }}" aria-current="page" href="#">Users </a>
+            </li>
+            {% endif %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                    Account
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <li><a class="dropdown-item" href="#">Your account</a></li>
+                    <li><a class="dropdown-item {{ 'active' if active_menu=='login' }}"
+                            href="{{ url_for('login') }}">Login</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('logout') }}" tabindex="-1">Logout {{session['user']
+                            if 'user' in session else '' }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('register') }}">Register</a></li>
+                </ul>
+            </li>
+            <form class="form-inline my-2 my-lg-0 ml-auto">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+        </ul>
+    </div>
+</nav>
