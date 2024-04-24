@@ -435,6 +435,9 @@ def delete_user(user_name):
     if user:
         flash('User {} has been removed'.format(user_name))
 
+    db.session.delete(user)
+    db.session.commit()
+
     return redirect(url_for('users'))
 
 
@@ -516,6 +519,9 @@ def delete_movie(movie_title):
     if movie:
         flash('Movie {} has been removed'.format(movie_title))
 
+    db.session.delete(movie)
+    db.session.commit()
+
     return redirect(url_for('movie_base'))
 
 
@@ -570,6 +576,155 @@ def add_new_movie():
         else:
             flash('Error: {}'.format(message))
             return render_template('add_new_movie.html', active_menu='add_new_movie', movie=movie, login=login)
+
+
+@app.route('/showtime_base')
+def showtime_base():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You don't have an access to go to this page")
+        return redirect(url_for('login'))
+
+    showtimes = Showtimes.query.all()
+
+    return render_template('showtime_base.html', active_menu='showtime_base', showtimes=showtimes, login=login)
+
+
+@app.route('/edit_showtime/<showtime_id>', methods=['GET', 'POST'])
+def edit_showtime(showtime_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid and not login.is_admin:
+        flash("You are not allowed to do this. You have to be logged as an administrator")
+        return redirect(url_for('showtime_base'))
+
+    showtime = Showtimes.query.filter(Showtimes.id == showtime_id).first()
+    message = None
+
+    if showtime == None:
+        flash('No such showtime')
+        return redirect(url_for('showtime_base'))
+
+    if request.method == 'GET':
+        return render_template('edit_showtime.html', active_menu='edit_showtime', showtime=showtime, login=login)
+    else:
+        new_movie_id = None if 'movie_id' not in request.form else request.form['movie_id']
+        new_room_id = None if 'room_id' not in request.form else request.form['room_id']
+        new_start_time = '' if 'start_time' not in request.form else request.form[
+            'start_time']
+        new_end_time = '' if 'end_time' not in request.form else request.form['end_time']
+        new_type = '' if 'type' not in request.form else request.form['type']
+        new_language = '' if 'language' not in request.form else request.form['language']
+
+        if new_movie_id != showtime.movie_id and new_movie_id != None:
+            showtime.movie_id = new_movie_id
+            db.session.commit()
+            flash('Movie_id was changed')
+
+        if new_room_id != None and new_room_id != showtime.room_id:
+            showtime.room_id = new_room_id
+            db.session.commit()
+            flash('Room_id was changed')
+
+        if new_start_time != '' and new_start_time != showtime.start_time:
+            showtime.start_time = new_start_time
+            db.session.commit()
+            flash('Start_time was changed')
+
+        if new_end_time != '' and new_end_time != showtime.end_time:
+            showtime.end_time = new_end_time
+            db.session.commit()
+            flash('End_time was changed')
+
+        if new_type != '' and new_type != showtime.type:
+            showtime.type = new_type
+            db.session.commit()
+            flash('Type was changed')
+
+        if new_language != '' and new_language != showtime.language:
+            showtime.language = new_language
+            db.session.commit()
+            flash('Language was changed')
+
+        return redirect(url_for('showtime_base'))
+
+
+@app.route('/delete_showtime/<showtime_id>')
+def delete_showtime(showtime_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to delete showtime")
+        return redirect(url_for('showtime_base'))
+
+    showtime = Showtimes.query.filter(Showtimes.id == showtime_id).first()
+    if showtime:
+        flash('Showtime {} has been removed'.format(showtime_id))
+
+    db.session.delete(showtime)
+    db.session.commit()
+    return redirect(url_for('showtime_base'))
+
+
+@app.route('/add_new_showtime', methods=['GET', 'POST'])
+def add_new_showtime():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+
+    message = None
+    showtime = {}
+    if request.method == 'GET':
+        return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login)
+    else:
+        showtime['movie_id'] = None if 'movie_id' not in request.form else request.form['movie_id']
+        showtime['room_id'] = None if 'room_id' not in request.form else request.form['room_id']
+        showtime['start_time'] = '' if 'start_time' not in request.form else request.form[
+            'start_time']
+        showtime['end_time'] = '' if 'end_time' not in request.form else request.form['end_time']
+        showtime['type'] = '' if 'type' not in request.form else request.form['type']
+        showtime['language'] = '' if 'language' not in request.form else request.form['language']
+
+        if not Movies.query.filter_by(id=showtime['movie_id']).first():
+            message = 'Movie with the given ID does not exist.'
+
+        conflicting_showtimes = Showtimes.query.filter(
+            Showtimes.room_id == showtime['room_id'],
+            Showtimes.start_time < showtime['end_time'],
+            Showtimes.end_time > showtime['start_time']
+        ).all()
+
+        if conflicting_showtimes:
+            message = 'Room is not available at the specified time.'
+
+        if showtime['movie_id'] == None:
+            message = 'Movie_id cannot be empty'
+        elif showtime['room_id'] == None:
+            message = 'Room_id cannot be empty'
+        elif showtime['start_time'] == '':
+            message = 'Start_time cannot be empty'
+        elif showtime['end_time'] == '':
+            message = 'End_time cannot be empty'
+        elif showtime['type'] == '':
+            message = 'Type cannot be empty'
+        elif showtime['language'] == '':
+            message = 'Language cannot be empty'
+
+        if not message:
+            new_showtime = Showtimes(movie_id=showtime['movie_id'], room_id=showtime['room_id'],
+                                     start_time=showtime['start_time'],
+                                     end_time=showtime['end_time'], type=showtime['type'],
+                                     # type: ignore
+                                     language=showtime['language'])
+            db.session.add(new_showtime)
+            db.session.commit()
+
+            flash('Showtime for movie {} and room {} created'.format(
+                showtime['movie_id'], showtime['room_id']))
+            return redirect(url_for('showtime_base'))
+        else:
+            flash('Error: {}'.format(message))
+            return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login)
 
 
 if __name__ == '__main__':

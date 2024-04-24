@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Movie base
+Showtime base
 {% endblock %}
 
 {% block content %}
@@ -42,28 +42,30 @@ Movie base
     <table class="table">
         <thead>
             <th scope="col">Id</th>
-            <th scope="col">Title</th>
-            <th scope="col">Duration</th>
-            <th scope="col">Director</th>
-            <th scope="col">Description</th>
-            <th scope="col">Photo</th>
+            <th scope="col">Movie_id</th>
+            <th scope="col">Room_id</th>
+            <th scope="col">Start time</th>
+            <th scope="col">End time</th>
+            <th scope="col">Type</th>
+            <th scope="col">Language</th>
             <th scope="col">Actions</th>
         </thead>
         <tbody>
-            {% for movie in movies %}
+            {% for showtime in showtimes %}
             <tr>
-                <th scope="row">{{ movie.id }}</th>
-                <td>{{ movie.title }}</td>
-                <td>{{ movie.duration }}</td>
-                <td>{{ movie.director }}</td>
-                <td>{{ movie.description }}</td>
-                <td>{{ movie.photo }}</td>
+                <th scope="row">{{ showtime.id }}</th>
+                <td>{{ showtime.movie_id }}</td>
+                <td>{{ showtime.room_id }}</td>
+                <td>{{ showtime.start_time }}</td>
+                <td>{{ showtime.end_time }}</td>
+                <td>{{ showtime.type }}</td>
+                <td>{{ showtime.language }}</td>
                 <td>
-                    <a href="{{ url_for('edit_movie', movie_title=movie.title) }}" class="btn btn-success btn-sm"
+                    <a href="{{ url_for('edit_showtime', showtime_id=showtime.id) }}" class="btn btn-success btn-sm"
                         role="button">Edit...</a>
                     <a type="button" class="btn btn-danger btn-sm delete-confirm" data-bs-toggle="modal"
-                        data-bs-target="#confirmDeleteModal" data-desc="{{ 'Delete movie {}?'.format(movie.title) }}"
-                        data-url="{{ url_for('delete_movie', movie_title=movie.title) }}">
+                        data-bs-target="#confirmDeleteModal" data-desc="{{ 'Delete showtime {}?'.format(showtime.id) }}"
+                        data-url="{{ url_for('delete_showtime', showtime_id=showtime.id) }}">
                         Delete
                     </a>
                 </td>

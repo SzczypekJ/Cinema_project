@@ -23,6 +23,18 @@
             {% endif %}
             {% if 'user' in session and session['is_admin'] %}
             <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='showtime_base' }}" aria-current="page"
+                    href="{{ url_for('showtime_base') }}">Showtime base</a>
+            </li>
+            {% endif %}
+            {% if 'user' in session and session['is_admin'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='add_new_showtime' }}" aria-current="page"
+                    href="{{ url_for('add_new_showtime') }}">Add new showtime</a>
+            </li>
+            {% endif %}
+            {% if 'user' in session and session['is_admin'] %}
+            <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='users' }}" aria-current="page"
                     href="{{ url_for('users') }}">Users </a>
             </li>

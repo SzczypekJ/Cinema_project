@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}
+Edit showtime
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col-5 h1">Edit showtime {{ showtime.id }}</div>
+    </div>
+    <form id="user_form" action="{{ url_for('edit_showtime', showtime_id=showtime.id) }}" method="POST">
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="movie_id">Movie_id</label></div>
+            <div class="col-4">
+                <input type="text" id="movie_id" name="movie_id" value="{{ showtime.movie_id }}"
+                    class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="room_id">Room_id</label></div>
+            <div class="col-4">
+                <input type="text" id="room_id" name="room_id" value="{{ showtime.room_id }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="start_time">Start_time</label></div>
+            <div class="col-4">
+                <input type="text" id="start_time" name="start_time" value="{{ showtime.start_time }}"
+                    class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="end_time">End_time</label></div>
+            <div class="col-4">
+                <input type="text" id="end_time" name="end_time" value="{{ showtime.end_time }}"
+                    class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="type">Type</label></div>
+            <div class="col-4">
+                <input type="text" id="type" name="type" value="{{ showtime.type }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="language">Language</label></div>
+            <div class="col-4">
+                <input type="text" id="language" name="language" value="{{ showtime.language }}"
+                    class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"></div>
+            <div class="col-2">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
