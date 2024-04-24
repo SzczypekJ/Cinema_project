@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}
+Add new movie
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col-5 h1">Add new movie</div>
+    </div>
+    <form id="user_form" action="{{ url_for('add_new_movie') }}" method="POST">
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="title">Title</label></div>
+            <div class="col-4">
+                <input type="text" id="title" name="title" value="{{ movie.title }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="duration">Duration</label></div>
+            <div class="col-4">
+                <input type="text" id="duration" name="duration" value="{{ movie.duration }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="director">Director</label></div>
+            <div class="col-4">
+                <input type="text" id="director" name="director" value="{{ movie.duration }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="description">Description</label></div>
+            <div class="col-4">
+                <textarea class="form-control" id="description" name="description" rows="8">{{ movie.description }}</textarea>
+            </div>
+        </div>        
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="photo">Photo</label></div>
+            <div class="col-4">
+                <input type="text" id="photo" name="photo" value="{{ movie.photo }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"></div>
+            <div class="col-2">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

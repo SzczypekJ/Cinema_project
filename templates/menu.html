@@ -11,7 +11,20 @@
             </li>
             {% if 'user' in session and session['is_admin'] %}
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if active_menu=='users' }}" aria-current="page" href="#">Users </a>
+                <a class="nav-link {{ 'active' if active_menu=='movie_base' }}" aria-current="page"
+                    href="{{ url_for('movie_base') }}">Movie base</a>
+            </li>
+            {% endif %}
+            {% if 'user' in session and session['is_admin'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='add_new_movie' }}" aria-current="page"
+                    href="{{ url_for('add_new_movie') }}">Add new movie</a>
+            </li>
+            {% endif %}
+            {% if 'user' in session and session['is_admin'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_menu=='users' }}" aria-current="page"
+                    href="{{ url_for('users') }}">Users </a>
             </li>
             {% endif %}
             <li class="nav-item dropdown">

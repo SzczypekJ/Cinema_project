@@ -5,6 +5,7 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
+from collections import defaultdict
 
 import random
 import string
@@ -23,8 +24,8 @@ db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 # Admin pass:
-# user name: onp
-# user pass: kMw
+# user name: ewm
+# user pass: uch
 
 
 class Users(db.Model):
@@ -51,6 +52,7 @@ class Movies(db.Model):
     duration = db.Column(Integer, nullable=False)
     director = db.Column(String(100))
     description = db.Column(Text)
+    photo = db.Column(String(255))
 
 
 class Rooms(db.Model):
@@ -94,6 +96,8 @@ class Showtimes(db.Model):
     room = db.relationship('Rooms', backref=db.backref('showtimes', lazy=True))
     start_time = db.Column(DateTime, nullable=False)
     end_time = db.Column(DateTime, nullable=False)
+    type = db.Column(String(20), nullable=False)
+    language = db.Column(String(50), nullable=False)
 
 
 class Bookings(db.Model):
@@ -159,6 +163,7 @@ class UserPass:
         os_urandom_static = b"ID_\x12p:\x8d\xe7&\xcb\xf0=H1\xc1\x16\xac\xe5BX\xd7\xd6j\xe3i\x11\xbe\xaa\x05\xccc\xc2\xe8K\xcf\xf1\xac\x9bFy(\xfbn.`\xe9\xcd\xdd'\xdf`~vm\xae\xf2\x93WD\x04"
         salt = hashlib.sha256(os_urandom_static).hexdigest().encode('ascii')
         pwdhash = hashlib.pbkdf2_hmac(
+            # type: ignore
             'sha512', self.password.encode('utf-8'), salt, 100000)
         pwdhash = binascii.hexlify(pwdhash)
         return (salt + pwdhash).decode('ascii')
@@ -328,7 +333,243 @@ def register():
 def repertoire():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
-    return render_template('repertoire.html', active_menu='repertoire', login=login)
+
+    movies = Movies.query.all()
+
+    movies_with_showtimes = defaultdict(list)
+    for movie in movies:
+        for showtime in movie.showtimes:
+            movies_with_showtimes[movie].append({
+                'start_time': showtime.start_time,
+                'end_time': showtime.end_time,
+                'type': showtime.type,
+                'language': showtime.language
+            })
+
+    return render_template('repertoire.html', active_menu='repertoire', login=login, movies_with_showtimes=movies_with_showtimes)
+
+
+@app.route('/user_status_change/<action>/<user_name>')
+def user_status_change(action, user_name):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+
+    if not login.is_valid or not login.is_admin:
+        flash("You don't have access to change that")
+        return redirect(url_for('users'))
+
+    if action == 'active':
+        user = Users.query.filter(
+            Users.name == user_name, Users.name != login.user).first()
+        if user:
+            user.is_active = (user.is_active + 1) % 2
+            db.session.commit()
+    elif action == 'admin':
+        user = Users.query.filter(
+            Users.name == user_name, Users.name != login.user).first()
+        if user:
+            user.is_admin = (user.is_admin + 1) % 2
+            db.session.commit()
+
+    return redirect(url_for('users'))
+
+
+@app.route('/users')
+def users():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You don't have an access to go to this page")
+        return redirect(url_for('login'))
+
+    users = Users.query.all()
+
+    return render_template('users.html', active_menu='users', users=users, login=login)
+
+
+@app.route('/edit_user/<user_name>', methods=['GET', 'POST'])
+def edit_user(user_name):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid and not login.is_admin:
+        flash("You are not allowed to do this. You have to be logged as an administrator")
+        return redirect(url_for('users'))
+
+    user = Users.query.filter(Users.name == user_name).first()
+    message = None
+
+    if user == None:
+        flash('No such user')
+        return redirect(url_for('users'))
+
+    if request.method == 'GET':
+        return render_template('edit_user.html', active_menu='users', user=user, login=login)
+    else:
+        new_email = '' if 'email' not in request.form else request.form['email']
+        new_password = '' if 'user_pass' not in request.form else request.form['user_pass']
+
+        if new_email != user.email:
+            user.email = new_email
+            db.session.commit()
+            flash('Email was changed')
+
+        if new_password != '':
+            user_pass = UserPass(user_name, new_password)
+            user.password = user_pass.hash_password()
+            db.session.commit()
+            flash('Password was changed')
+
+        return redirect(url_for('users'))
+
+
+@app.route('/delete_user/<user_name>')
+def delete_user(user_name):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to delete users")
+        return redirect(url_for('users'))
+
+    user = Users.query.filter(Users.name == user_name,
+                              Users.name != login.user).first()
+    if user:
+        flash('User {} has been removed'.format(user_name))
+
+    return redirect(url_for('users'))
+
+
+@app.route('/movie_base')
+def movie_base():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You don't have an access to go to this page")
+        return redirect(url_for('login'))
+
+    movies = Movies.query.all()
+
+    return render_template('movie_base.html', active_menu='movie_base', movies=movies, login=login)
+
+
+@app.route('/edit_movie/<movie_title>', methods=['GET', 'POST'])
+def edit_movie(movie_title):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid and not login.is_admin:
+        flash("You are not allowed to do this. You have to be logged as an administrator")
+        return redirect(url_for('movie_base'))
+
+    movie = Movies.query.filter(Movies.title == movie_title).first()
+    message = None
+
+    if movie == None:
+        flash('No such movie')
+        return redirect(url_for('movie_base'))
+
+    if request.method == 'GET':
+        return render_template('edit_movie.html', active_menu='edit_movie', movie=movie, login=login)
+    else:
+        new_title = '' if 'title' not in request.form else request.form['title']
+        new_duration = None if 'duration' not in request.form else request.form['duration']
+        new_director = '' if 'director' not in request.form else request.form['director']
+        new_description = '' if 'description' not in request.form else request.form[
+            'description']
+        new_photo = '' if 'photo' not in request.form else request.form['photo']
+
+        if new_title != movie.title and new_title != '':
+            movie.title = new_title
+            db.session.commit()
+            flash('Title was changed')
+
+        if new_duration != None and new_duration != movie.duration:
+            movie.duration = new_duration
+            db.session.commit()
+            flash('Duration was changed')
+
+        if new_director != '' and new_director != movie.director:
+            movie.director = new_director
+            db.session.commit()
+            flash('Director was changed')
+
+        if new_description != '' and new_description != movie.description:
+            movie.description = new_description
+            db.session.commit()
+            flash('Description was changed')
+
+        if new_photo != '' and new_photo != movie.photo:
+            movie.photo = new_photo
+            db.session.commit()
+            flash('Photo was changed')
+
+        return redirect(url_for('movie_base'))
+
+
+@app.route('/delete_movie/<movie_title>')
+def delete_movie(movie_title):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to delete movies")
+        return redirect(url_for('movie_base'))
+
+    movie = Movies.query.filter(Movies.title == movie_title).first()
+    if movie:
+        flash('Movie {} has been removed'.format(movie_title))
+
+    return redirect(url_for('movie_base'))
+
+
+@app.route('/add_new_movie', methods=['GET', 'POST'])
+def add_new_movie():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+
+    message = None
+    movie = {}
+    if request.method == 'GET':
+        return render_template('add_new_movie.html', active_menu='add_new_movie', movie=movie, login=login)
+    else:
+        movie['title'] = '' if 'title' not in request.form else request.form['title']
+        movie['duration'] = None if 'duration' not in request.form else request.form['duration']
+        movie['director'] = '' if 'director' not in request.form else request.form['director']
+        movie['description'] = '' if 'description' not in request.form else request.form['description']
+        print('description: ', movie['description'])
+        movie['photo'] = '' if 'photo' not in request.form else request.form['photo']
+
+        is_title_unique = (Movies.query.filter(
+            Movies.title == movie['title']).count() == 0)
+
+        is_photo_unique = (Movies.query.filter(
+            Movies.photo == movie['photo']).count() == 0)
+
+        if movie['title'] == '':
+            message = 'Title cannot be empty'
+        elif movie['duration'] == None:
+            message = 'Duration cannot be empty'
+        elif movie['director'] == '':
+            message = 'Director cannot be empty'
+        elif movie['description'] == '':
+            message = 'Description cannot be empty'
+        elif movie['photo'] == '':
+            message = 'Photo cannot be empty'
+        elif not is_title_unique:
+            message = 'Movie with title {} already exists'.format(
+                movie['title'])
+        elif not is_photo_unique:
+            message = 'This photo is used by another movie'
+
+        if not message:
+            new_movie = Movies(title=movie['title'], duration=movie['duration'], director=movie['director'],
+                               # type: ignore
+                               description=movie['description'], photo=movie['photo'])
+            db.session.add(new_movie)
+            db.session.commit()
+
+            flash('Movie {} created'.format(movie['title']))
+            return redirect(url_for('movie_base'))
+        else:
+            flash('Error: {}'.format(message))
+            return render_template('add_new_movie.html', active_menu='add_new_movie', movie=movie, login=login)
 
 
 if __name__ == '__main__':
