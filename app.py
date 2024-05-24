@@ -66,6 +66,19 @@ class RoomSections(db.Model):
     num_rows = db.Column(Integer, nullable=False)
     seats_per_row = db.Column(Integer, nullable=False)
     price_multiplier = db.Column(Integer, nullable=False)
+    start_row = db.Column(Integer, nullable=False)
+    end_row = db.Column(Integer, nullable=False)
+
+    def create_seats(self):
+        for row in range(self.start_row, self.end_row + 1):
+            for seat in range(1, self.seats_per_row + 1):
+                new_seat = Seats(
+                    room_section_id=self.id,
+                    row_number=row,
+                    seat_number=seat
+                )  # type: ignore
+                db.session.add(new_seat)
+        db.session.commit()
 
 
 class Seats(db.Model):
@@ -153,6 +166,7 @@ class UserPass:
         os_urandom_static = b"ID_\x12p:\x8d\xe7&\xcb\xf0=H1\xc1\x16\xac\xe5BX\xd7\xd6j\xe3i\x11\xbe\xaa\x05\xccc\xc2\xe8K\xcf\xf1\xac\x9bFy(\xfbn.`\xe9\xcd\xdd'\xdf`~vm\xae\xf2\x93WD\x04"
         salt = hashlib.sha256(os_urandom_static).hexdigest().encode('ascii')
         pwdhash = hashlib.pbkdf2_hmac(
+            # type: ignore
             # type: ignore
             'sha512', self.password.encode('utf-8'), salt, 100000)
         pwdhash = binascii.hexlify(pwdhash)
@@ -395,8 +409,14 @@ def edit_user(user_name):
     if request.method == 'GET':
         return render_template('edit_user.html', active_menu='users', user=user, login=login)
     else:
+        new_user_name = '' if 'user_name' not in request.form else request.form['user_name']
         new_email = '' if 'email' not in request.form else request.form['email']
         new_password = '' if 'user_pass' not in request.form else request.form['user_pass']
+
+        if new_user_name != user.name:
+            user.name = new_user_name
+            db.session.commit()
+            flash('User name was changed')
 
         if new_email != user.email:
             user.email = new_email
@@ -733,12 +753,11 @@ def your_account(user_name):
 def edit_your_account(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
-    if not login.is_valid and not login.is_admin:
-        flash("You are not allowed to do this. You have to be logged as an administrator")
-        return redirect(url_for('users'))
+    if not login.is_valid and not login.is_active:
+        flash("Your login is not valid or your account is not active")
+        return redirect(url_for('index'))
 
     user = Users.query.filter(Users.name == user_name).first()
-    message = None
 
     if user == None:
         flash('No such user')
@@ -747,8 +766,14 @@ def edit_your_account(user_name):
     if request.method == "GET":
         return render_template("edit_your_account.html", active_menu='edit_your_account', login=login, user=user)
     else:
+        new_user_name = '' if 'user_name' not in request.form else request.form['user_name']
         new_email = '' if 'email' not in request.form else request.form['email']
         new_password = '' if 'user_pass' not in request.form else request.form['user_pass']
+
+        if new_user_name != user.name:
+            user.name = new_user_name
+            db.session.commit()
+            flash('User name was changed')
 
         if new_email != user.email:
             user.email = new_email
@@ -761,7 +786,273 @@ def edit_your_account(user_name):
             db.session.commit()
             flash('Password was changed')
 
-        return redirect(url_for('users'))
+        return redirect(url_for('your_account'))
+
+
+@app.route('/room_base')
+def room_base():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You don't have an access to go to this page")
+        return redirect(url_for('login'))
+
+    rooms = Rooms.query.all()
+
+    return render_template('room_base.html', active_menu='room_base', rooms=rooms,
+                           login=login)
+
+
+@app.route('/edit_room_base/<int:room_id>', methods=['GET', 'POST'])
+def edit_room_base(room_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash(
+            "You are not allowed to do this. You have to be logged in as an administrator")
+        return redirect(url_for('room_base'))
+
+    room = Rooms.query.get(room_id)
+    if room is None:
+        flash('No such room')
+        return redirect(url_for('room_base'))
+
+    if request.method == 'GET':
+        return render_template('edit_room_base.html', active_menu='edit_room_base', room=room, login=login)
+    else:
+        new_name = request.form.get('name')
+        new_capacity = request.form.get('capacity')
+
+        if new_name and new_name != room.name:
+            room.name = new_name
+            flash('Name was changed')
+
+        if new_capacity and new_capacity != room.capacity:
+            room.capacity = new_capacity
+            flash('Capacity was changed')
+
+        db.session.commit()
+        return redirect(url_for('room_base'))
+
+
+@app.route('/delete_room/<room_id>')
+def delete_room(room_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to delete room")
+        return redirect(url_for('room_base'))
+
+    room = Rooms.query.filter(Rooms.id == room_id).first()
+    if room:
+        flash('Room {} has been removed'.format(room_id))
+
+    db.session.delete(room)
+    db.session.commit()
+    return redirect(url_for('room_base'))
+
+
+@app.route('/add_new_room', methods=['GET', 'POST'])
+def add_new_room():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+
+    if not login.is_valid or not login.is_admin:
+        flash(
+            "You are not allowed to do this. You have to be logged in as an administrator")
+        return redirect(url_for('room_base'))
+
+    message = None
+    room = {}
+    if request.method == 'GET':
+        return render_template('add_new_room.html', active_menu='add_new_room', room=room, login=login)
+    else:
+        room['name'] = None if 'name' not in request.form else request.form['name']
+        room['capacity'] = '' if 'capacity' not in request.form else request.form['capacity']
+
+        if room['name'] == '':
+            message = 'Name cannot be empty'
+        elif room['capacity'] == None:
+            message = 'Capacity cannot be empty'
+
+        if not message:
+            new_room = Rooms(name=room['name'],
+                             capacity=room['capacity'])  # type: ignore
+            db.session.add(new_room)
+            db.session.commit()
+            flash('Room added successfully')
+            return redirect(url_for('room_base'))
+        else:
+            flash('Error: {}'.format(message))
+            return render_template('add_new_room.html', active_menu='add_new_room', room=room, login=login)
+
+
+@app.route('/room_section_base')
+def room_section_base():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You don't have an access to go to this page")
+        return redirect(url_for('login'))
+
+    room_sections = RoomSections.query.all()
+
+    return render_template('room_section_base.html', active_menu='room_section_base', room_sections=room_sections,
+                           login=login)
+
+
+@app.route('/edit_room_section/<room_section_id>', methods=['GET', 'POST'])
+def edit_room_section(room_section_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid and not login.is_admin:
+        flash("You are not allowed to do this. You have to be logged as an administrator")
+        return redirect(url_for('room_section_base'))
+
+    room_section = RoomSections.query.filter(
+        RoomSections.id == room_section_id).first()
+
+    if room_section == None:
+        flash('No such room section')
+        return redirect(url_for('room_section_base'))
+
+    if request.method == 'GET':
+        return render_template('edit_room_section.html', active_menu='edit_room_section', room_section=room_section,
+                               login=login)
+    else:
+        new_room_id = None if 'room_id' not in request.form else request.form['room_id']
+        new_section_type = '' if 'section_type' not in request.form else request.form[
+            'section_type']
+        new_capacity = None if 'capacity' not in request.form else request.form['capacity']
+        new_num_rows = None if 'num_rows' not in request.form else request.form['num_rows']
+        new_seats_per_row = None if 'seats_per_row' not in request.form else request.form[
+            'seats_per_row']
+        new_price_multiplier = None if 'price_multiplier' not in request.form else request.form[
+            'price_multiplier']
+        new_start_row = None if 'start_row' not in request.form else request.form['start_row']
+        new_end_row = None if 'end_row' not in request.form else request.form['end_row']
+
+        if new_room_id != None and new_room_id != room_section.room_id:
+            room_section.room_id = new_room_id
+            db.session.commit()
+            flash('Room_id was changed')
+
+        if new_section_type != '' and new_section_type != room_section.section_type:
+            room_section.section_type = new_section_type
+            db.session.commit()
+            flash('Section_type was changed')
+
+        if new_capacity != None and new_capacity != room_section.capacity:
+            room_section.capacity = new_capacity
+            db.session.commit()
+            flash('Capacity was changed')
+
+        if new_num_rows != None and new_num_rows != room_section.num_rows:
+            room_section.num_rows = new_num_rows
+            db.session.commit()
+            flash('Num_rows was changed')
+
+        if new_seats_per_row != None and new_seats_per_row != room_section.seats_per_row:
+            room_section.seats_per_row = new_seats_per_row
+            db.session.commit()
+            flash('Seats_per_row was changed')
+
+        if new_price_multiplier != None and new_price_multiplier != room_section.price_multiplier:
+            room_section.price_multiplier = new_price_multiplier
+            db.session.commit()
+            flash('Price_multiplier was changed')
+
+        if new_start_row != None and new_start_row != room_section.start_row:
+            room_section.start_row = new_start_row
+            db.session.commit()
+            flash('Start_row was changed')
+
+        if new_end_row != None and new_end_row != room_section.end_row:
+            room_section.end_row = new_end_row
+            db.session.commit()
+            flash('End_row was changed')
+
+        return redirect(url_for('room_section_base'))
+
+
+@app.route('/delete_room_section/<room_section_id>')
+def delete_room_section(room_section_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to delete room_section")
+        return redirect(url_for('room_section_base'))
+
+    room_section = RoomSections.query.filter(
+        RoomSections.id == room_section_id).first()
+    if room_section:
+        flash('Showtime {} has been removed'.format(room_section_id))
+
+    db.session.delete(room_section)
+    db.session.commit()
+    return redirect(url_for('room_section_base'))
+
+
+@app.route('/add_new_room_section', methods=['GET', 'POST'])
+def add_new_room_section():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to add new room_section")
+        return redirect(url_for('room_section_base'))
+
+    message = None
+    room_section = {}
+    if request.method == 'GET':
+        return render_template('add_new_room_section.html', active_menu='add_new_room_section',
+                               room_section=room_section, login=login)
+    else:
+        room_section['room_id'] = None if 'room_id' not in request.form else request.form['room_id']
+        room_section['section_type'] = '' if 'section_type' not in request.form else request.form['section_type']
+        room_section['capacity'] = None if 'capacity' not in request.form else request.form['capacity']
+        room_section['num_rows'] = None if 'num_rows' not in request.form else request.form['num_rows']
+        room_section['seats_per_row'] = None if 'seats_per_row' not in request.form else request.form['seats_per_row']
+        room_section['price_multiplier'] = None if 'price_multiplier' not in request.form else request.form['price_multiplier']
+        room_section['start_row'] = None if 'start_row' not in request.form else request.form['start_row']
+        room_section['end_row'] = None if 'end_row' not in request.form else request.form['end_row']
+
+        if not Rooms.query.filter_by(id=room_section['room_id']).first():
+            message = 'Room with the given ID does not exist.'
+
+        if room_section['room_id'] == None:
+            message = 'Room_id cannot be empty'
+        elif room_section['section_type'] == '':
+            message = 'Section_type cannot be empty'
+        elif room_section['capacity'] == None:
+            message = 'Capacity cannot be empty'
+        elif room_section['num_rows'] == None:
+            message = 'Num_rows cannot be empty'
+        elif room_section['seats_per_row'] == None:
+            message = 'Seats_per_row cannot be empty'
+        elif room_section['price_multiplier'] == None:
+            message = 'Price_multiplier cannot be empty'
+        elif room_section['start_row'] == None:
+            message = 'Start_row cannot be empty'
+        elif room_section['end_row'] == None:
+            message = 'End_row cannot be empty'
+        if not message:
+            new_room_section = RoomSections(room_id=room_section['room_id'], section_type=room_section['section_type'],
+                                            capacity=room_section['capacity'],
+                                            num_rows=room_section['num_rows'], seats_per_row=room_section['seats_per_row'],
+                                            price_multiplier=room_section['price_multiplier'],
+                                            start_row=room_section['start_row'],
+                                            # type: ignore
+                                            end_row=room_section['end_row'])
+            db.session.add(new_room_section)
+            db.session.commit()
+
+            flash('Room_section for room {} was created'.format(
+                room_section['room_id']))
+            return redirect(url_for('room_section_base'))
+        else:
+            flash('Error: {}'.format(message))
+            return render_template('add_new_room_section.html', active_menu='add_new_room_section',
+                                   room_section=room_section, login=login)
 
 
 if __name__ == '__main__':

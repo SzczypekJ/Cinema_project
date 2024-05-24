@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}
+Edit room
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col-5 h1">Edit room {{ room.id }}</div>
+    </div>
+    <form id="user_form" action="{{ url_for('edit_room_base', room_id=room.id) }}" method="POST">
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="name">Name</label></div>
+            <div class="col-4">
+                <input type="text" id="name" name="name" value="{{ room.name }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"><label for="capacity">Capacity</label></div>
+            <div class="col-4">
+                <input type="text" id="capacity" name="capacity" value="{{ room.capacity }}" class="form-control"><br>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-1 col-form-label"></div>
+            <div class="col-2">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
