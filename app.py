@@ -24,8 +24,8 @@ db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 # Admin pass:
-# user name: ewm
-# user pass: uch
+# user name: dhg
+# user pass: hYk
 
 
 class Users(db.Model):
@@ -36,13 +36,6 @@ class Users(db.Model):
     password = db.Column(Text, nullable=False)
     is_active = db.Column(Boolean, default=False)
     is_admin = db.Column(Boolean, default=False)
-
-
-class GuestTokens(db.Model):
-    __tablename__ = 'GuestTokens'
-    token_id = db.Column(Integer, primary_key=True, autoincrement=True)
-    is_active = db.Column(Boolean, default=False)
-    created_at = db.Column(DateTime, default=datetime.now)
 
 
 class Movies(db.Model):
@@ -105,9 +98,6 @@ class Bookings(db.Model):
     id = db.Column(Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(Integer, db.ForeignKey('Users.id'), nullable=False)
     user = db.relationship('Users', backref=db.backref('bookings', lazy=True))
-    token_id = db.Column(Integer, db.ForeignKey('GuestTokens.token_id'))
-    token = db.relationship(
-        'GuestTokens', backref=db.backref('bookings', lazy=True))
     showtime_id = db.Column(Integer, db.ForeignKey(
         'Showtimes.id'), nullable=False)
     showtime = db.relationship(
@@ -254,7 +244,7 @@ def logout():
 @app.route('/init_app')
 def init_app():
     db.create_all()
-
+    print("baza")
     active_admins = Users.query.filter(
         Users.is_active == True, Users.is_admin == True).count()
 
@@ -323,7 +313,7 @@ def register():
             db.session.commit()
 
             flash('User {} created'.format(user['user_name']))
-            return redirect(url_for('index'))
+            return redirect(url_for('login'))
         else:
             flash('Error: {}'.format(message))
             return render_template('register.html', active_menu='register', user=user, login=login)
@@ -725,6 +715,53 @@ def add_new_showtime():
         else:
             flash('Error: {}'.format(message))
             return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login)
+
+
+@app.route('/your_account/<user_name>')
+def your_account(user_name):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    user = Users.query.filter(Users.name == user_name).first()
+    if not login.is_valid or not login.is_active or user is None:
+        flash("You have to be logged in to see your account")
+        return redirect(url_for('login'))
+
+    return render_template("your_account.html", login=login, user=user, active_menu='your_account')
+
+
+@app.route('/edit_your_account/<user_name>', methods=['GET', 'POST'])
+def edit_your_account(user_name):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid and not login.is_admin:
+        flash("You are not allowed to do this. You have to be logged as an administrator")
+        return redirect(url_for('users'))
+
+    user = Users.query.filter(Users.name == user_name).first()
+    message = None
+
+    if user == None:
+        flash('No such user')
+        return redirect(url_for('login'))
+
+    if request.method == "GET":
+        return render_template("edit_your_account.html", active_menu='edit_your_account', login=login, user=user)
+    else:
+        new_email = '' if 'email' not in request.form else request.form['email']
+        new_password = '' if 'user_pass' not in request.form else request.form['user_pass']
+
+        if new_email != user.email:
+            user.email = new_email
+            db.session.commit()
+            flash('Email was changed')
+
+        if new_password != '':
+            user_pass = UserPass(user_name, new_password)
+            user.password = user_pass.hash_password()
+            db.session.commit()
+            flash('Password was changed')
+
+        return redirect(url_for('users'))
 
 
 if __name__ == '__main__':
