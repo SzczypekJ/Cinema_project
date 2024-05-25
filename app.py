@@ -1,16 +1,37 @@
 from sqlalchemy import Float
 from flask import Flask, redirect, render_template, url_for, request, flash, g, session
-from datetime import date
+from datetime import date, timedelta
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
 from collections import defaultdict
+import threading
+import time
 import uuid
 import random
 import string
 import hashlib
 import binascii
+
+
+def release_expired_bookings():
+    while True:
+        with app.app_context():
+            print("Checking for expired bookings...")
+            expired_bookings = Bookings.query.filter(
+                Bookings.expiry_time < datetime.now(),
+                Bookings.status != 'Purchased'
+            ).all()
+            for booking in expired_bookings:
+                print(f"Releasing seat for booking ID: {booking.id}")
+                seat = Seats.query.get(booking.seat_id)
+                if seat:
+                    seat.availability = True
+                db.session.delete(booking)
+            db.session.commit()
+        time.sleep(60)
+
 
 app = Flask(__name__)
 
@@ -85,7 +106,8 @@ class RoomSections(db.Model):
                 new_seat = Seats(
                     room_section_id=self.id,
                     row_number=row,
-                    seat_number=seat
+                    seat_number=seat,
+                    availability=True
                 )  # type: ignore
                 db.session.add(new_seat)
         db.session.commit()
@@ -100,6 +122,7 @@ class Seats(db.Model):
         'RoomSections', backref=db.backref('seats', lazy=True))
     row_number = db.Column(Integer, nullable=False)
     seat_number = db.Column(Integer, nullable=False)
+    availability = db.Column(Boolean, default=True, nullable=False)
 
 
 class Showtimes(db.Model):
@@ -129,6 +152,8 @@ class Bookings(db.Model):
     seat = db.relationship('Seats', backref=db.backref('bookings', lazy=True))
     status = db.Column(String(20))
     created_at = db.Column(DateTime, default=datetime.now)
+    expiry_time = db.Column(
+        DateTime, default=lambda: datetime.now() + timedelta(minutes=5))
 
 
 class RoomBookings(db.Model):
@@ -164,6 +189,7 @@ class Payments(db.Model):
 
 class UserPass:
     def __init__(self, user='', password=''):
+        self.id = None
         self.user = user
         self.password = password
         self.email = ''
@@ -176,8 +202,6 @@ class UserPass:
         os_urandom_static = b"ID_\x12p:\x8d\xe7&\xcb\xf0=H1\xc1\x16\xac\xe5BX\xd7\xd6j\xe3i\x11\xbe\xaa\x05\xccc\xc2\xe8K\xcf\xf1\xac\x9bFy(\xfbn.`\xe9\xcd\xdd'\xdf`~vm\xae\xf2\x93WD\x04"
         salt = hashlib.sha256(os_urandom_static).hexdigest().encode('ascii')
         pwdhash = hashlib.pbkdf2_hmac(
-            # type: ignore
-            # type: ignore
             'sha512', self.password.encode('utf-8'), salt, 100000)
         pwdhash = binascii.hexlify(pwdhash)
         return (salt + pwdhash).decode('ascii')
@@ -227,20 +251,31 @@ class UserPass:
         db_user = Users.query.filter(Users.name == self.user).first()
 
         if db_user == None:
+            self.id = None
             self.is_valid = False
             self.is_admin = False
             self.is_active = False
             self.email = ''
         elif db_user.is_active != 1:
+            self.id = None
             self.is_valid = False
             self.is_admin = False
             self.is_active = False
             self.email = db_user.email
         else:
+            self.id = db_user.id
+            # self.name = db_user.name
             self.is_valid = True
             self.is_admin = db_user.is_admin
             self.is_active = db_user.is_active
             self.email = db_user.email
+
+
+@app.context_processor
+def inject_login():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    return dict(login=login)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -366,6 +401,8 @@ def repertoire():
     login.get_user_info()
 
     movies = Movies.query.all()
+    user_id = login.id if login.is_valid else None
+    print('user_name: ', user_id)
 
     movies_with_showtimes = defaultdict(list)
     for movie in movies:
@@ -377,7 +414,8 @@ def repertoire():
                 'language': showtime.language
             })
 
-    return render_template('repertoire.html', active_menu='repertoire', login=login, movies_with_showtimes=movies_with_showtimes)
+    return render_template('repertoire.html', active_menu='repertoire', login=login,
+                           movies_with_showtimes=movies_with_showtimes, user_id=user_id)
 
 
 @app.route('/user_status_change/<action>/<user_name>')
@@ -959,6 +997,23 @@ def edit_room_section(room_section_id):
         new_start_row = None if 'start_row' not in request.form else request.form['start_row']
         new_end_row = None if 'end_row' not in request.form else request.form['end_row']
 
+        existing_sections = RoomSections.query.filter_by(
+            room_id=new_room_id).all()
+        for existing_section in existing_sections:
+            if (new_start_row is not None and new_end_row is not None and
+                int(new_start_row) <= int(existing_section.end_row) and
+                int(new_end_row) >= int(existing_section.start_row) and
+                    existing_section.id != room_section.id):
+                flash('New section overlaps with existing section')
+                return render_template('edit_room_section.html', active_menu='edit_room_section', room_section=room_section,
+                                       login=login)
+
+        message = check_room_capacity_edit(room_section)
+        if message:
+            flash('Error: {}'.format(message))
+            return render_template('edit_room_section.html', active_menu='edit_room_section', room_section=room_section,
+                                   login=login)
+
         if new_room_id != None and new_room_id != room_section.room_id:
             room_section.room_id = new_room_id
             db.session.commit()
@@ -999,7 +1054,20 @@ def edit_room_section(room_section_id):
             db.session.commit()
             flash('End_row was changed')
 
+        room_section.create_seats()
         return redirect(url_for('room_section_base'))
+
+
+def check_room_capacity_edit(room_section):
+    room_id = room_section.room_id
+    room_capacity = Rooms.query.filter_by(
+        id=room_id).first().capacity  # type: ignore
+    new_section_capacity = int(room_section.num_rows) * \
+        int(room_section.seats_per_row)
+    if new_section_capacity > room_capacity:
+        return 'New section capacity exceeds room capacity'
+    else:
+        return None
 
 
 @app.route('/delete_room_section/<room_section_id>')
@@ -1043,6 +1111,12 @@ def add_new_room_section():
         room_section['start_row'] = None if 'start_row' not in request.form else request.form['start_row']
         room_section['end_row'] = None if 'end_row' not in request.form else request.form['end_row']
 
+        message = check_room_capacity(room_section)
+        if message:
+            flash('Error: {}'.format(message))
+            return render_template('add_new_room_section.html', active_menu='add_new_room_section',
+                                   room_section=room_section, login=login)
+
         if not Rooms.query.filter_by(id=room_section['room_id']).first():
             message = 'Room with the given ID does not exist.'
 
@@ -1062,6 +1136,16 @@ def add_new_room_section():
             message = 'Start_row cannot be empty'
         elif room_section['end_row'] == None:
             message = 'End_row cannot be empty'
+        elif int(room_section['seats_per_row']) * int(room_section['num_rows']) > int(room_section['capacity']):  # type: ignore
+            message = 'Section capacity exceeds room capacity'
+        else:
+            existing_sections = RoomSections.query.filter_by(
+                room_id=room_section['room_id']).all()
+            for existing_section in existing_sections:
+                if (int(room_section['start_row']) <= int(existing_section.end_row) and
+                        int(room_section['end_row']) >= int(existing_section.start_row)):
+                    message = 'New section overlaps with existing section'
+                    break
         if not message:
             new_room_section = RoomSections(room_id=room_section['room_id'], section_type=room_section['section_type'],
                                             capacity=room_section['capacity'],
@@ -1072,7 +1156,7 @@ def add_new_room_section():
                                             end_row=room_section['end_row'])
             db.session.add(new_room_section)
             db.session.commit()
-
+            new_room_section.create_seats()
             flash('Room_section for room {} was created'.format(
                 room_section['room_id']))
             return redirect(url_for('room_section_base'))
@@ -1082,5 +1166,75 @@ def add_new_room_section():
                                    room_section=room_section, login=login)
 
 
+def check_room_capacity(room_section):
+    room_id = room_section['room_id']
+    room = Rooms.query.filter_by(id=room_id).first()
+    if room is None:
+        return 'Room with the given ID does not exist.'
+
+    room_capacity = room.capacity
+    new_section_capacity = int(
+        room_section['num_rows']) * int(room_section['seats_per_row'])
+    if new_section_capacity > room_capacity:
+        return 'New section capacity exceeds room capacity'
+    else:
+        return None
+
+
+def save_booking(user_id, showtime_id, seat_id, status):
+    new_booking = Bookings(
+        user_id=user_id, showtime_id=showtime_id, seat_id=seat_id, status=status,
+        expiry_time=datetime.now() + timedelta(minutes=5)  # type: ignore
+    )
+    db.session.add(new_booking)
+
+    seat = Seats.query.get(seat_id)
+    if seat:
+        seat.availability = False
+
+    db.session.commit()
+
+
+@app.route('/bookings/<int:user_id>', methods=['GET', 'POST'])
+def bookings(user_id):
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    if not login.is_valid or not login.is_active:
+        flash("You have to be logged in to book tickets")
+        return redirect(url_for('login'))
+
+    current_user = Users.query.get(user_id)
+    if not current_user:
+        flash("User not found")
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        showtime_id = request.form['showtime']
+        seat_id = request.form['seat']
+        status = 'Booked'
+
+        seat = Seats.query.get(seat_id)
+        if not seat or not seat.availability:
+            flash("Selected seat is no longer available. Please choose another seat.")
+            return redirect(url_for('bookings', user_id=user_id))
+
+        save_booking(user_id, showtime_id, seat_id, status)
+        flash("Booking successful! You have 5 minutes to make payment in another way we will delete your booking")
+        return redirect(url_for('index'))
+
+    movies = Movies.query.all()
+    showtimes = Showtimes.query.all()
+    rooms = Rooms.query.all()
+    room_sections = RoomSections.query.all()
+    seats = db.session.query(Seats, RoomSections).filter(
+        Seats.room_section_id == RoomSections.id).all()
+
+    return render_template('bookings.html', active_menu='bookings', login=login,
+                           user=current_user, movies=movies, showtimes=showtimes,
+                           rooms=rooms, room_sections=room_sections, seats=seats)
+
+
 if __name__ == '__main__':
+    release_thread = threading.Thread(target=release_expired_bookings)
+    release_thread.start()
     app.run()

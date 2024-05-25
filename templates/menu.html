@@ -9,55 +9,55 @@
                 <a class="nav-link {{ 'active' if active_menu=='repertoire' }}" aria-current="page"
                     href="{{ url_for('repertoire') }}">Repertoire</a>
             </li>
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='movie_base' }}" aria-current="page"
                     href="{{ url_for('movie_base') }}">Movie base</a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='add_new_movie' }}" aria-current="page"
                     href="{{ url_for('add_new_movie') }}">Add new movie</a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='showtime_base' }}" aria-current="page"
                     href="{{ url_for('showtime_base') }}">Showtime base</a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='add_new_showtime' }}" aria-current="page"
                     href="{{ url_for('add_new_showtime') }}">Add new showtime</a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='users' }}" aria-current="page"
                     href="{{ url_for('users') }}">Users </a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='rooms_base' }}" aria-current="page"
                     href="{{ url_for('room_base') }}">Rooms </a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='add_new_room' }}" aria-current="page"
                     href="{{ url_for('add_new_room') }}">Add new room </a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='room_section_base' }}" aria-current="page"
                     href="{{ url_for('room_section_base') }}">Room sections </a>
             </li>
             {% endif %}
-            {% if 'user' in session and session['is_admin'] %}
+            {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='add_new_room_section' }}" aria-current="page"
                     href="{{ url_for('add_new_room_section') }}">Add new room section </a>

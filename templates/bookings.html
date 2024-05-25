@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}
+Bookings
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col-12 h1">Book your movie tickets</div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <form id="booking_form" action="{{ url_for('bookings', user_id=user.id) }}" method="POST">
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="user_id">User ID</label></div>
+                    <div class="col-8">
+                        <input type="text" id="user_id" name="user_id" value="{{ user.id }}" class="form-control"
+                            readonly required><br>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="user_name">User Name</label></div>
+                    <div class="col-8">
+                        <input type="text" id="user_name" name="user_name" value="{{ user.name }}" class="form-control"
+                            readonly required><br>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="user_email">User Email</label></div>
+                    <div class="col-8">
+                        <input type="email" id="user_email" name="user_email" value="{{ user.email }}"
+                            class="form-control" readonly required><br>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="movie">Movie</label></div>
+                    <div class="col-8">
+                        <select id="movie" name="movie" class="form-control" required>
+                            {% for movie in movies %}
+                            <option value="{{ movie.id }}">{{ movie.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="showtime">Showtime</label></div>
+                    <div class="col-8">
+                        <select id="showtime" name="showtime" class="form-control" required>
+                            {% for showtime in showtimes %}
+                            <option value="{{ showtime.id }}">{{ showtime.start_time }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="seat">Seat</label></div>
+                    <div class="col-8">
+                        <select id="seat" name="seat" class="form-control" required>
+                            {% for seat, room_section in seats %}
+                            <option value="{{ seat.id }}">row number: {{ seat.row_number }}, seat number: {{
+                                seat.seat_number }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"><label for="status">Status</label></div>
+                    <div class="col-8">
+                        <input type="text" id="status" name="status" value="Booked" class="form-control" readonly><br>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4 col-form-label"></div>
+                    <div class="col-8">
+                        <button type="submit" class="btn btn-primary">Book Now</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <h3>Cinema Seat Map</h3>
+            <div class="seat-map">
+                {% for section in room_sections %}
+                <h4>{{ section.section_type }} Section</h4>
+                {% for row in range(section.start_row, section.end_row + 1) %}
+                <div class="seat-row">
+                    <div class="seat-row-label">Row {{ row }}</div>
+                    {% for seat, room_section in seats if seat.row_number == row and room_section.id == section.id %}
+                    <div
+                        class="seat {% if not seat.availability %}booked{% elif room_section.section_type == 'VIP' %}vip{% else %}available{% endif %}">
+                        {{ seat.seat_number }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .seat-map {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 20px;
+    }
+
+    .seat-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+
+    .seat-row-label {
+        width: 60px;
+        text-align: center;
+        margin-right: 10px;
+    }
+
+    .seat {
+        width: 30px;
+        height: 30px;
+        margin: 2px;
+        text-align: center;
+        line-height: 30px;
+        border-radius: 5px;
+        color: white;
+    }
+
+    .available {
+        background-color: green;
+    }
+
+    .booked {
+        background-color: red;
+    }
+
+    .vip {
+        background-color: gold;
+    }
+
+    .vip.booked {
+        background-color: red;
+    }
+</style>
+{% endblock %}

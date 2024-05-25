@@ -19,21 +19,23 @@ Add new movie
         <div class="row mb-3">
             <div class="col-1 col-form-label"><label for="duration">Duration</label></div>
             <div class="col-4">
-                <input type="text" id="duration" name="duration" value="{{ movie.duration }}" class="form-control"><br>
+                <input type="number" id="duration" name="duration" value="{{ movie.duration }}"
+                    class="form-control"><br>
             </div>
         </div>
         <div class="row mb-3">
             <div class="col-1 col-form-label"><label for="director">Director</label></div>
             <div class="col-4">
-                <input type="text" id="director" name="director" value="{{ movie.duration }}" class="form-control"><br>
+                <input type="text" id="director" name="director" value="{{ movie.director }}" class="form-control"><br>
             </div>
         </div>
         <div class="row mb-3">
             <div class="col-1 col-form-label"><label for="description">Description</label></div>
             <div class="col-4">
-                <textarea class="form-control" id="description" name="description" rows="8">{{ movie.description }}</textarea>
+                <textarea class="form-control" id="description" name="description"
+                    rows="8">{{ movie.description }}</textarea>
             </div>
-        </div>        
+        </div>
         <div class="row mb-3">
             <div class="col-1 col-form-label"><label for="photo">Photo</label></div>
             <div class="col-4">
