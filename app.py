@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
 from collections import defaultdict
-
+import uuid
 import random
 import string
 import hashlib
@@ -26,6 +26,16 @@ db.init_app(app)
 # Admin pass:
 # user name: dhg
 # user pass: hYk
+
+
+class ActiveSessions(db.Model):
+    __tablename__ = 'ActiveSessions'
+    id = db.Column(Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(Integer, db.ForeignKey('Users.id'), nullable=False)
+    user = db.relationship('Users', backref=db.backref(
+        'active_sessions', lazy=True))
+    session_id = db.Column(String(255), nullable=False, unique=True)
+    created_at = db.Column(DateTime, default=datetime.now)
 
 
 class Users(db.Model):
@@ -196,6 +206,15 @@ class UserPass:
 
         if user_record is not None and self.verify_password(user_record.password, self.password):
             session['user'] = user_record.name
+            session['session_id'] = str(uuid.uuid4())  # Unikalne ID sesji
+            new_session = ActiveSessions(
+                # type: ignore
+                user_id=user_record.id, session_id=session['session_id'])
+            db.session.add(new_session)
+
+            user_record.is_active = True
+            db.session.commit()
+
             if user_record.is_admin:
                 session['is_admin'] = True
             return user_record
@@ -250,7 +269,15 @@ def login():
 @app.route('/logout')
 def logout():
     if 'user' in session:
-        session.pop('user', None)
+        user_record = Users.query.filter(Users.name == session['user']).first()
+        if user_record:
+            ActiveSessions.query.filter_by(
+                user_id=user_record.id, session_id=session['session_id']).delete()
+
+            user_record.is_active = False
+            db.session.commit()
+
+        session.clear()
         flash('You are logged out')
     return redirect(url_for('login'))
 
