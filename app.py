@@ -320,7 +320,6 @@ def logout():
 @app.route('/init_app')
 def init_app():
     db.create_all()
-    print("baza")
     active_admins = Users.query.filter(
         Users.is_active == True, Users.is_admin == True).count()
 
@@ -402,12 +401,12 @@ def repertoire():
 
     movies = Movies.query.all()
     user_id = login.id if login.is_valid else None
-    print('user_name: ', user_id)
 
     movies_with_showtimes = defaultdict(list)
     for movie in movies:
         for showtime in movie.showtimes:
             movies_with_showtimes[movie].append({
+                'id': showtime.id,
                 'start_time': showtime.start_time,
                 'end_time': showtime.end_time,
                 'type': showtime.type,
@@ -614,7 +613,6 @@ def add_new_movie():
         movie['duration'] = None if 'duration' not in request.form else request.form['duration']
         movie['director'] = '' if 'director' not in request.form else request.form['director']
         movie['description'] = '' if 'description' not in request.form else request.form['description']
-        print('description: ', movie['description'])
         movie['photo'] = '' if 'photo' not in request.form else request.form['photo']
 
         is_title_unique = (Movies.query.filter(
@@ -754,27 +752,36 @@ def add_new_showtime():
     else:
         showtime['movie_id'] = None if 'movie_id' not in request.form else request.form['movie_id']
         showtime['room_id'] = None if 'room_id' not in request.form else request.form['room_id']
-        showtime['start_time'] = '' if 'start_time' not in request.form else request.form[
-            'start_time']
+        showtime['start_time'] = '' if 'start_time' not in request.form else request.form['start_time']
         showtime['end_time'] = '' if 'end_time' not in request.form else request.form['end_time']
         showtime['type'] = '' if 'type' not in request.form else request.form['type']
         showtime['language'] = '' if 'language' not in request.form else request.form['language']
+
+        try:
+            start_time = datetime.strptime(
+                showtime['start_time'], '%Y-%m-%d %H:%M:%S')
+            end_time = datetime.strptime(
+                showtime['end_time'], '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            flash('Invalid date format. Use YYYY-MM-DD HH:MM:SS')
+            return redirect(url_for('add_new_showtime'))
 
         if not Movies.query.filter_by(id=showtime['movie_id']).first():
             message = 'Movie with the given ID does not exist.'
 
         conflicting_showtimes = Showtimes.query.filter(
             Showtimes.room_id == showtime['room_id'],
-            Showtimes.start_time < showtime['end_time'],
-            Showtimes.end_time > showtime['start_time']
+            Showtimes.start_time < end_time,
+            Showtimes.end_time > start_time
         ).all()
 
         if conflicting_showtimes:
             message = 'Room is not available at the specified time.'
+            return redirect(url_for('add_new_showtime'))
 
-        if showtime['movie_id'] == None:
+        if showtime['movie_id'] is None:
             message = 'Movie_id cannot be empty'
-        elif showtime['room_id'] == None:
+        elif showtime['room_id'] is None:
             message = 'Room_id cannot be empty'
         elif showtime['start_time'] == '':
             message = 'Start_time cannot be empty'
@@ -786,11 +793,14 @@ def add_new_showtime():
             message = 'Language cannot be empty'
 
         if not message:
-            new_showtime = Showtimes(movie_id=showtime['movie_id'], room_id=showtime['room_id'],
-                                     start_time=showtime['start_time'],
-                                     end_time=showtime['end_time'], type=showtime['type'],
-                                     # type: ignore
-                                     language=showtime['language'])
+            new_showtime = Showtimes(
+                movie_id=showtime['movie_id'],
+                room_id=showtime['room_id'],
+                start_time=start_time,
+                end_time=end_time,
+                type=showtime['type'],
+                language=showtime['language']
+            )  # type: ignore
             db.session.add(new_showtime)
             db.session.commit()
 
@@ -1193,10 +1203,11 @@ def save_booking(user_id, showtime_id, seat_id, status):
         seat.availability = False
 
     db.session.commit()
+    return new_booking.id
 
 
-@app.route('/bookings/<int:user_id>', methods=['GET', 'POST'])
-def bookings(user_id):
+@app.route('/bookings/<int:user_id>/<int:showtime_id>', methods=['GET', 'POST'])
+def bookings(user_id, showtime_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
     if not login.is_valid or not login.is_active:
@@ -1208,30 +1219,90 @@ def bookings(user_id):
         flash("User not found")
         return redirect(url_for('index'))
 
+    showtime = Showtimes.query.get(showtime_id)
+    if not showtime:
+        flash("Showtime not found")
+        return redirect(url_for('repertoire'))
+
     if request.method == 'POST':
-        showtime_id = request.form['showtime']
         seat_id = request.form['seat']
-        status = 'Booked'
+        status = request.form['status']
 
         seat = Seats.query.get(seat_id)
         if not seat or not seat.availability:
             flash("Selected seat is no longer available. Please choose another seat.")
-            return redirect(url_for('bookings', user_id=user_id))
+            return redirect(url_for('bookings', user_id=user_id, showtime_id=showtime_id))
 
-        save_booking(user_id, showtime_id, seat_id, status)
-        flash("Booking successful! You have 5 minutes to make payment in another way we will delete your booking")
-        return redirect(url_for('index'))
+        booking_id = save_booking(user_id, showtime_id, seat_id, status)
+        flash("Booking successful!")
+        return redirect(url_for('payment', booking_id=booking_id))
 
-    movies = Movies.query.all()
-    showtimes = Showtimes.query.all()
-    rooms = Rooms.query.all()
-    room_sections = RoomSections.query.all()
     seats = db.session.query(Seats, RoomSections).filter(
-        Seats.room_section_id == RoomSections.id).all()
+        Seats.room_section_id == RoomSections.id,
+        RoomSections.room_id == showtime.room_id
+    ).all()
+    room_sections = RoomSections.query.filter_by(
+        room_id=showtime.room_id).all()
 
     return render_template('bookings.html', active_menu='bookings', login=login,
-                           user=current_user, movies=movies, showtimes=showtimes,
-                           rooms=rooms, room_sections=room_sections, seats=seats)
+                           user=current_user, showtime=showtime,
+                           seats=seats, room_sections=room_sections)
+
+
+@app.route('/payment/<int:booking_id>')
+def payment(booking_id):
+    booking = Bookings.query.get(booking_id)
+    if not booking:
+        flash("Booking not found")
+        return redirect(url_for('index'))
+
+    return render_template('payment.html', booking=booking)
+
+
+@app.route('/process_payment/<int:booking_id>', methods=['POST'])
+def process_payment(booking_id):
+    booking = Bookings.query.get(booking_id)
+    if not booking:
+        flash("Booking not found")
+        return redirect(url_for('index'))
+
+    payment_method = request.form.get('payment_method')
+    if not payment_method:
+        flash("Payment method not specified")
+        return redirect(url_for('payment', booking_id=booking_id))
+
+    new_payment = Payments(
+        booking_id=booking_id,
+        amount=calculate_amount(booking),
+        status="Completed",
+        payment_method=payment_method,
+        transaction_id=generate_transaction_id()
+    )  # type: ignore
+    db.session.add(new_payment)
+
+    booking.status = 'Purchased'
+    db.session.commit()
+
+    flash("Payment successful!")
+    return redirect(url_for('index'))
+
+
+def calculate_amount(booking):
+    base_price = 20.0
+    seat = Seats.query.get(booking.seat_id)
+    if not seat:
+        return base_price
+
+    room_section = RoomSections.query.get(seat.room_section_id)
+    if not room_section:
+        return base_price
+
+    final_price = base_price * room_section.price_multiplier
+    return final_price
+
+
+def generate_transaction_id():
+    return str(uuid.uuid4())
 
 
 if __name__ == '__main__':

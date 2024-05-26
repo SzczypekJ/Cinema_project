@@ -25,11 +25,10 @@ Repertoire
                             <strong>{{ showtime.type }}</strong>
                         </div>
                         <div class="mb-3">
-                            <button type="button" class="btn btn-outline-primary me-2"
-                                onclick="window.location.href='{{ url_for('bookings', user_id=user_id) }}'">
+                            <a href="{{ url_for('bookings', user_id=user_id, showtime_id=showtime.id) }}"
+                                class="btn btn-outline-primary me-2">
                                 {{ showtime.start_time }}
-                            </button>
-
+                            </a>
                         </div>
                         <div class="mb-3">
                             {{ showtime.language }}

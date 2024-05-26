@@ -10,7 +10,8 @@ Bookings
     </div>
     <div class="row">
         <div class="col-md-6">
-            <form id="booking_form" action="{{ url_for('bookings', user_id=user.id) }}" method="POST">
+            <form id="booking_form" action="{{ url_for('bookings', user_id=user.id, showtime_id=showtime.id) }}"
+                method="POST">
                 <div class="row mb-3">
                     <div class="col-4 col-form-label"><label for="user_id">User ID</label></div>
                     <div class="col-8">
@@ -35,21 +36,15 @@ Bookings
                 <div class="row mb-3">
                     <div class="col-4 col-form-label"><label for="movie">Movie</label></div>
                     <div class="col-8">
-                        <select id="movie" name="movie" class="form-control" required>
-                            {% for movie in movies %}
-                            <option value="{{ movie.id }}">{{ movie.title }}</option>
-                            {% endfor %}
-                        </select>
+                        <input type="text" id="movie" name="movie" value="{{ showtime.movie.title }}"
+                            class="form-control" readonly required><br>
                     </div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-4 col-form-label"><label for="showtime">Showtime</label></div>
                     <div class="col-8">
-                        <select id="showtime" name="showtime" class="form-control" required>
-                            {% for showtime in showtimes %}
-                            <option value="{{ showtime.id }}">{{ showtime.start_time }}</option>
-                            {% endfor %}
-                        </select>
+                        <input type="text" id="showtime" name="showtime" value="{{ showtime.start_time }}"
+                            class="form-control" readonly required><br>
                     </div>
                 </div>
                 <div class="row mb-3">
