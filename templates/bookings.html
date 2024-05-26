@@ -51,9 +51,9 @@ Bookings
                     <div class="col-4 col-form-label"><label for="seat">Seat</label></div>
                     <div class="col-8">
                         <select id="seat" name="seat" class="form-control" required>
-                            {% for seat, room_section in seats %}
-                            <option value="{{ seat.id }}">row number: {{ seat.row_number }}, seat number: {{
-                                seat.seat_number }}</option>
+                            {% for seat in seats %}
+                            <option value="{{ seat.id }}">Row: {{ seat.row_number }}, Seat: {{ seat.seat_number }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -80,9 +80,10 @@ Bookings
                 {% for row in range(section.start_row, section.end_row + 1) %}
                 <div class="seat-row">
                     <div class="seat-row-label">Row {{ row }}</div>
-                    {% for seat, room_section in seats if seat.row_number == row and room_section.id == section.id %}
+                    {% for seat in seats if seat.row_number == row and seat.room_section_id == section.id and
+                    seat.showtime_id == showtime.id %}
                     <div
-                        class="seat {% if not seat.availability %}booked{% elif room_section.section_type == 'VIP' %}vip{% else %}available{% endif %}">
+                        class="seat {% if not seat.availability %}booked{% elif section.section_type == 'VIP' %}vip{% else %}available{% endif %}">
                         {{ seat.seat_number }}
                     </div>
                     {% endfor %}

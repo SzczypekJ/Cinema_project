@@ -4,23 +4,41 @@ Payment
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2>Payment for your booking</h2>
-    <p>User ID: {{ booking.user_id }}</p>
-    <p>Movie: {{ booking.showtime.movie.title }}</p>
-    <p>Showtime: {{ booking.showtime.start_time }}</p>
-    <p>Seat: Row {{ booking.seat.row_number }}, Seat {{ booking.seat.seat_number }}</p>
-    <p>Status: {{ booking.status }}</p>
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2>Payment for your booking</h2>
+                </div>
+                <div class="card-body">
+                    <p><strong>User Name:</strong> {{ user.name }}</p>
+                    <p><strong>User Email:</strong> {{ user.email }}</p>
+                    <p><strong>Movie:</strong> {{ booking.showtime.movie.title }}</p>
+                    <p><strong>Showtime:</strong> {{ booking.showtime.start_time }}</p>
+                    <p><strong>Seat:</strong> Row {{ booking.seat.row_number }}, Seat {{ booking.seat.seat_number }}</p>
+                    <p><strong>Status:</strong> {{ booking.status }}</p>
 
-    <h3>Choose your payment method:</h3>
-    <form id="payment_form" action="{{ url_for('process_payment', booking_id=booking.id) }}" method="POST">
-        <input type="hidden" name="payment_method" id="payment_method">
-        <button type="button" class="btn btn-primary" onclick="submitPayment('Credit card')">Credit card</button>
-        <button type="button" class="btn btn-primary" onclick="submitPayment('Blik')">Blik</button>
-        <button type="button" class="btn btn-primary" onclick="submitPayment('Voucher')">Voucher</button>
-    </form>
+                    <h4 class="mt-4">Choose your payment method:</h4>
+                    <form id="payment_form" action="{{ url_for('process_payment', booking_id=booking.id) }}"
+                        method="POST">
+                        <input type="hidden" name="payment_method" id="payment_method">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-primary"
+                                onclick="submitPayment('Credit card')">Credit card</button>
+                            <button type="button" class="btn btn-outline-primary"
+                                onclick="submitPayment('Blik')">Blik</button>
+                            <button type="button" class="btn btn-outline-primary"
+                                onclick="submitPayment('Voucher')">Voucher</button>
+                        </div>
+                    </form>
 
-    <h3>Time remaining to complete your booking: <span id="countdown"></span></h3>
+                    <h4 class="mt-4">Time remaining to complete your booking:</h4>
+                    <div id="countdown" class="h5 text-danger"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

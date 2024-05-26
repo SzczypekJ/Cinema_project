@@ -100,18 +100,6 @@ class RoomSections(db.Model):
     start_row = db.Column(Integer, nullable=False)
     end_row = db.Column(Integer, nullable=False)
 
-    def create_seats(self):
-        for row in range(self.start_row, self.end_row + 1):
-            for seat in range(1, self.seats_per_row + 1):
-                new_seat = Seats(
-                    room_section_id=self.id,
-                    row_number=row,
-                    seat_number=seat,
-                    availability=True
-                )  # type: ignore
-                db.session.add(new_seat)
-        db.session.commit()
-
 
 class Seats(db.Model):
     __tablename__ = 'Seats'
@@ -123,6 +111,10 @@ class Seats(db.Model):
     row_number = db.Column(Integer, nullable=False)
     seat_number = db.Column(Integer, nullable=False)
     availability = db.Column(Boolean, default=True, nullable=False)
+    showtime_id = db.Column(Integer, db.ForeignKey(
+        'Showtimes.id'), nullable=False)
+    showtime = db.relationship(
+        'Showtimes', backref=db.backref('seats', lazy=True))
 
 
 class Showtimes(db.Model):
@@ -674,13 +666,15 @@ def edit_showtime(showtime_id):
 
     showtime = Showtimes.query.filter(Showtimes.id == showtime_id).first()
     message = None
+    movies = Movies.query.all()
+    rooms = Rooms.query.all()
 
     if showtime == None:
         flash('No such showtime')
         return redirect(url_for('showtime_base'))
 
     if request.method == 'GET':
-        return render_template('edit_showtime.html', active_menu='edit_showtime', showtime=showtime, login=login)
+        return render_template('edit_showtime.html', active_menu='edit_showtime', showtime=showtime, login=login, movies=movies, rooms=rooms)
     else:
         new_movie_id = None if 'movie_id' not in request.form else request.form['movie_id']
         new_room_id = None if 'room_id' not in request.form else request.form['room_id']
@@ -689,6 +683,17 @@ def edit_showtime(showtime_id):
         new_end_time = '' if 'end_time' not in request.form else request.form['end_time']
         new_type = '' if 'type' not in request.form else request.form['type']
         new_language = '' if 'language' not in request.form else request.form['language']
+
+        try:
+            if new_start_time != '':
+                new_start_time = datetime.strptime(
+                    new_start_time, '%Y-%m-%d %H:%M:%S')
+            if new_end_time != '':
+                new_end_time = datetime.strptime(
+                    new_end_time, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            flash('Invalid date format. Use YYYY-MM-DD HH:MM:SS')
+            return redirect(url_for('edit_showtime', showtime_id=showtime_id))
 
         if new_movie_id != showtime.movie_id and new_movie_id != None:
             showtime.movie_id = new_movie_id
@@ -720,6 +725,11 @@ def edit_showtime(showtime_id):
             db.session.commit()
             flash('Language was changed')
 
+        Seats.query.filter_by(showtime_id=showtime_id).delete()
+        db.session.commit()
+
+        create_seats_for_showtime(showtime_id)
+
         return redirect(url_for('showtime_base'))
 
 
@@ -733,11 +743,37 @@ def delete_showtime(showtime_id):
 
     showtime = Showtimes.query.filter(Showtimes.id == showtime_id).first()
     if showtime:
-        flash('Showtime {} has been removed'.format(showtime_id))
+        Seats.query.filter_by(showtime_id=showtime_id).delete()
+        db.session.commit()
 
-    db.session.delete(showtime)
-    db.session.commit()
+        db.session.delete(showtime)
+        db.session.commit()
+        flash('Showtime {} has been removed'.format(showtime_id))
+    else:
+        flash('Showtime not found')
+
     return redirect(url_for('showtime_base'))
+
+
+def create_seats_for_showtime(showtime_id):
+    showtime = Showtimes.query.get(showtime_id)
+    if not showtime:
+        return
+
+    room_sections = RoomSections.query.filter_by(
+        room_id=showtime.room_id).all()
+    for section in room_sections:
+        for row in range(section.start_row, section.end_row + 1):
+            for seat_number in range(1, section.seats_per_row + 1):
+                new_seat = Seats(
+                    room_section_id=section.id,
+                    row_number=row,
+                    seat_number=seat_number,
+                    availability=True,
+                    showtime_id=showtime_id
+                )  # type: ignore
+                db.session.add(new_seat)
+    db.session.commit()
 
 
 @app.route('/add_new_showtime', methods=['GET', 'POST'])
@@ -745,10 +781,16 @@ def add_new_showtime():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
 
+    if not login.is_valid or not login.is_admin:
+        flash("You have to be logged as administrator to add new showtime")
+        return redirect(url_for('showtime_base'))
+
     message = None
     showtime = {}
+    movies = Movies.query.all()
+    rooms = Rooms.query.all()
     if request.method == 'GET':
-        return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login)
+        return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login, movies=movies, rooms=rooms)
     else:
         showtime['movie_id'] = None if 'movie_id' not in request.form else request.form['movie_id']
         showtime['room_id'] = None if 'room_id' not in request.form else request.form['room_id']
@@ -804,12 +846,14 @@ def add_new_showtime():
             db.session.add(new_showtime)
             db.session.commit()
 
+            create_seats_for_showtime(new_showtime.id)
+
             flash('Showtime for movie {} and room {} created'.format(
                 showtime['movie_id'], showtime['room_id']))
             return redirect(url_for('showtime_base'))
         else:
             flash('Error: {}'.format(message))
-            return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login)
+            return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login, movies=movies, rooms=rooms)
 
 
 @app.route('/your_account/<user_name>')
@@ -821,7 +865,9 @@ def your_account(user_name):
         flash("You have to be logged in to see your account")
         return redirect(url_for('login'))
 
-    return render_template("your_account.html", login=login, user=user, active_menu='your_account')
+    bookings = Bookings.query.filter_by(user_id=user.id).all()
+    return render_template("your_account.html", login=login, user=user, bookings=bookings,
+                           active_menu='your_account')
 
 
 @app.route('/edit_your_account/<user_name>', methods=['GET', 'POST'])
@@ -862,6 +908,28 @@ def edit_your_account(user_name):
             flash('Password was changed')
 
         return redirect(url_for('your_account'))
+
+
+@app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
+def cancel_booking(booking_id):
+    booking = Bookings.query.get(booking_id)
+    if not booking:
+        flash("Booking not found")
+        return redirect(url_for('your_account', user_name=session.get('user')))
+
+    payment = Payments.query.filter_by(booking_id=booking_id).first()
+    if payment:
+        db.session.delete(payment)
+
+    seat = Seats.query.get(booking.seat_id)
+    if seat:
+        seat.availability = True
+
+    db.session.delete(booking)
+    db.session.commit()
+
+    flash("Your booking has been cancelled.")
+    return redirect(url_for('your_account', user_name=session.get('user')))
 
 
 @app.route('/room_base')
@@ -1064,7 +1132,11 @@ def edit_room_section(room_section_id):
             db.session.commit()
             flash('End_row was changed')
 
-        room_section.create_seats()
+        showtimes = Showtimes.query.filter_by(
+            room_id=room_section.room_id).all()
+        for showtime in showtimes:
+            create_seats_for_showtime(showtime.id)
+
         return redirect(url_for('room_section_base'))
 
 
@@ -1166,7 +1238,6 @@ def add_new_room_section():
                                             end_row=room_section['end_row'])
             db.session.add(new_room_section)
             db.session.commit()
-            new_room_section.create_seats()
             flash('Room_section for room {} was created'.format(
                 room_section['room_id']))
             return redirect(url_for('room_section_base'))
@@ -1191,21 +1262,6 @@ def check_room_capacity(room_section):
         return None
 
 
-def save_booking(user_id, showtime_id, seat_id, status):
-    new_booking = Bookings(
-        user_id=user_id, showtime_id=showtime_id, seat_id=seat_id, status=status,
-        expiry_time=datetime.now() + timedelta(minutes=5)  # type: ignore
-    )
-    db.session.add(new_booking)
-
-    seat = Seats.query.get(seat_id)
-    if seat:
-        seat.availability = False
-
-    db.session.commit()
-    return new_booking.id
-
-
 @app.route('/bookings/<int:user_id>/<int:showtime_id>', methods=['GET', 'POST'])
 def bookings(user_id, showtime_id):
     login = UserPass(session.get('user'))  # type: ignore
@@ -1228,7 +1284,8 @@ def bookings(user_id, showtime_id):
         seat_id = request.form['seat']
         status = request.form['status']
 
-        seat = Seats.query.get(seat_id)
+        seat = Seats.query.filter_by(
+            id=seat_id, showtime_id=showtime_id).first()
         if not seat or not seat.availability:
             flash("Selected seat is no longer available. Please choose another seat.")
             return redirect(url_for('bookings', user_id=user_id, showtime_id=showtime_id))
@@ -1237,16 +1294,28 @@ def bookings(user_id, showtime_id):
         flash("Booking successful!")
         return redirect(url_for('payment', booking_id=booking_id))
 
-    seats = db.session.query(Seats, RoomSections).filter(
-        Seats.room_section_id == RoomSections.id,
-        RoomSections.room_id == showtime.room_id
-    ).all()
+    seats = db.session.query(Seats).filter_by(showtime_id=showtime_id).all()
     room_sections = RoomSections.query.filter_by(
         room_id=showtime.room_id).all()
 
     return render_template('bookings.html', active_menu='bookings', login=login,
                            user=current_user, showtime=showtime,
                            seats=seats, room_sections=room_sections)
+
+
+def save_booking(user_id, showtime_id, seat_id, status):
+    new_booking = Bookings(
+        user_id=user_id, showtime_id=showtime_id, seat_id=seat_id, status=status,
+        expiry_time=datetime.now() + timedelta(minutes=5)
+    )  # type: ignore
+    db.session.add(new_booking)
+
+    seat = Seats.query.filter_by(id=seat_id, showtime_id=showtime_id).first()
+    if seat:
+        seat.availability = False
+
+    db.session.commit()
+    return new_booking.id
 
 
 @app.route('/payment/<int:booking_id>')
@@ -1256,7 +1325,12 @@ def payment(booking_id):
         flash("Booking not found")
         return redirect(url_for('index'))
 
-    return render_template('payment.html', booking=booking)
+    user = Users.query.get(booking.user_id)
+    if not user:
+        flash("User not found")
+        return redirect(url_for('index'))
+
+    return render_template('payment.html', booking=booking, user=user)
 
 
 @app.route('/process_payment/<int:booking_id>', methods=['POST'])
