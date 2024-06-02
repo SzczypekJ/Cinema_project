@@ -1,4 +1,3 @@
-from sqlalchemy import Float
 from flask import Flask, redirect, render_template, url_for, request, flash, g, session
 from datetime import date, timedelta
 from datetime import datetime
