@@ -1,8 +1,13 @@
 {
+    "editor.quickSuggestionsDelay": 10,
+    "editor.acceptSuggestionOnEnter": "on",
+    "python.languageServer": "Pylance",
+    "editor.inlineSuggest.showToolbar": "onHover",
     "cSpell.words": [
-        "backref",
-        "Blik",
-        "roomsections",
-        "Showtimes"
-    ]
+        "dolar",
+        "endmacro"
+    ],
+    "files.associations": {
+        "*.html": "html"
+    }
 }
