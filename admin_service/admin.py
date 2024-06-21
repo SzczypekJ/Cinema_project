@@ -1,3 +1,4 @@
+from token_utils import UserPass, inject_login
 from database_connection import *
 import binascii
 import hashlib
@@ -22,6 +23,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 user_bp = Blueprint('admin', __name__)
 
+
+app.context_processor(inject_login)
+
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
@@ -34,6 +38,7 @@ db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 app.register_blueprint(auth_bp)
+
 
 @app.route('/init_app')
 def init_app():

@@ -1,4 +1,6 @@
+from token_utils import UserPass, inject_login
 from token_utils import *
+from flask import Flask, redirect, render_template, url_for, request, flash, g, session, Blueprint
 from database_connection import ActiveSessions, Users, Movies, Rooms, RoomSections, Seats, Showtimes, Bookings, RoomBookings, Payments
 import binascii
 import hashlib
@@ -8,23 +10,17 @@ import uuid
 import time
 import threading
 from collections import defaultdict
-from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from datetime import date, timedelta
-from flask import Flask, redirect, render_template, url_for, request, flash, g, session, Blueprint
+from datetime import datetime, date, timedelta
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-auth_bp = Blueprint('auth', __name__)
-
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
-
 app.config.from_pyfile('config.cfg')
 
 Base = declarative_base()
@@ -32,6 +28,11 @@ Base = declarative_base()
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
+# Blueprint for authentication routes in our app
+auth_bp = Blueprint('auth_bp', __name__)
+
+
+app.context_processor(inject_login)
 # Admin pass:
 # user name: dhg
 # user pass: hYk
@@ -55,7 +56,7 @@ def release_expired_bookings():
         time.sleep(60)
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -78,7 +79,7 @@ def login():
             return render_template('login.html', active_menu='login', login=login)
 
 
-@app.route('/logout')
+@auth_bp.route('/logout')
 def logout():
     if 'user' in session:
         user_record = Users.query.filter(Users.name == session['user']).first()
@@ -91,10 +92,10 @@ def logout():
 
         session.clear()
         flash('You are logged out')
-    return redirect(url_for('login'))
+    return redirect(url_for('auth_bp.login'))
 
 
-@app.route('/init_app')
+@auth_bp.route('/init_app')
 def init_app():
     db.create_all()
     active_admins = Users.query.filter(
@@ -121,16 +122,6 @@ def init_app():
 def index():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
-
-    # token = request.cookies.get('token')
-    # is_user = None
-    # is_admin = None
-    # if token:
-    #     _, admin = verify_token(token)
-    #     if admin == 1:
-    #         is_admin = True
-    #     else:
-    #         is_user = True
     return render_template('index.html', active_menu='home', login=login)
 
 
@@ -175,13 +166,15 @@ def register():
             db.session.commit()
 
             flash('User {} created'.format(user['user_name']))
-            return redirect(url_for('login'))
+            return redirect(url_for('auth_bp.login'))
         else:
             flash('Error: {}'.format(message))
             return render_template('register.html', active_menu='register', user=user, login=login)
 
 
+app.register_blueprint(auth_bp)
+
 if __name__ == '__main__':
     release_thread = threading.Thread(target=release_expired_bookings)
     release_thread.start()
-    app.run()
+    app.run(host='0.0.0.0', port=8000)
