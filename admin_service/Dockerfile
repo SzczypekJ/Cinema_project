@@ -1,8 +1,8 @@
 FROM python:3.9-slim
 
-WORKDIR /distrubuted-booking-app/admin_service
+WORKDIR /Cinema_project/admin_service
 
-COPY . /distrubuted-booking-app/admin_service
+COPY . /Cinema_project/admin_service
 
 # Instalacja narzędzi build-essential, gcc, i sqlite3
 RUN apt-get update && apt-get install -y \

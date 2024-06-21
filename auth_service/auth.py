@@ -1,4 +1,4 @@
-from token_utils import UserPass, inject_login
+from token_utils import UserPass
 from token_utils import *
 from flask import Flask, redirect, render_template, url_for, request, flash, g, session, Blueprint
 from database_connection import ActiveSessions, Users, Movies, Rooms, RoomSections, Seats, Showtimes, Bookings, RoomBookings, Payments
@@ -31,11 +31,18 @@ db.init_app(app)
 # Blueprint for authentication routes in our app
 auth_bp = Blueprint('auth_bp', __name__)
 
+@app.context_processor
+def inject_login():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    return dict(login=login)
+
 
 app.context_processor(inject_login)
 # Admin pass:
 # user name: dhg
 # user pass: hYk
+
 
 
 def release_expired_bookings():

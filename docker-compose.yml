@@ -2,13 +2,11 @@ version: '3.9'
 services:
   auth-service:
     build:
-      context: ./auth_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./auth_service/Dockerfile
     container_name: auth-service
     ports:
       - "8000:8000"
-    environment:
-      - FLASK_APP=auth
 
   admin-service:
     build:
