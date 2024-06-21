@@ -1,7 +1,7 @@
 from token_utils import UserPass, inject_login
 from token_utils import *
 from flask import Flask, redirect, render_template, url_for, request, flash, g, session, Blueprint
-from database_connection import ActiveSessions, Users, Movies, Rooms, RoomSections, Seats, Showtimes, Bookings, RoomBookings, Payments
+from database_connection import get_db_connection, ActiveSessions, Users, Movies, Rooms, RoomSections, Seats, Showtimes, Bookings, RoomBookings, Payments
 import binascii
 import hashlib
 import string
@@ -15,6 +15,9 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date, timedelta
 import sys
 import os
+from werkzeug.security import check_password_hash
+from flask import Flask, request, jsonify
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -54,6 +57,23 @@ def release_expired_bookings():
                 db.session.delete(booking)
             db.session.commit()
         time.sleep(60)
+
+@app.route('/auth/login', methods=['POST'])
+def login():
+    data = request.json
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM Users WHERE email = ?', (data['email'],))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+    if user and check_password_hash(user['password'], data['password']):
+        return jsonify({'status': 'success'}), 200
+    else:
+        return jsonify({'status': 'failed'}), 401
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])

@@ -5,7 +5,6 @@ import binascii
 import uuid
 import random
 import string
-from auth import app, db
 
 
 class UserPass:

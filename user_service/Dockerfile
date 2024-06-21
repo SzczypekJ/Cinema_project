@@ -1,10 +1,12 @@
 FROM python:3.9-slim
 
-WORKDIR /distrubuted-booking-app/user_service
+WORKDIR /Cinema_project/user_service
 
-COPY . /distrubuted-booking-app/user_service
+COPY ./user_service /Cinema_project/user_service
+COPY ./config.py /Cinema_project/user_service/config.py
+COPY ./database.py /Cinema_project/user_service/database.py
+COPY ./database_connection.py /Cinema_project/user_service/database_connection.py
 
-# Instalacja narzędzi build-essential, gcc, i sqlite3
 RUN apt-get update && apt-get install -y \
     gcc \
     build-essential \
@@ -12,7 +14,6 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalacja zależności z requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000

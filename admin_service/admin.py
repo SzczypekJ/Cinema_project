@@ -1,35 +1,21 @@
+from flask import redirect, render_template, url_for, request, flash, session, Blueprint
 from token_utils import UserPass, inject_login
-from database_connection import *
-import binascii
-import hashlib
-import string
-import random
-import uuid
-import time
-import threading
-from collections import defaultdict
-from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from datetime import date, timedelta
-from flask import Flask, redirect, render_template, url_for, request, flash, g, session, Blueprint
-import sys
-import os
-from token_utils import *
+from database_connection import Users, Movies, Showtimes, RoomSections, Seats, Bookings, Payments, Rooms
 from auth_service.auth import auth_bp
+from datetime import datetime, timedelta
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.ext.declarative import declarative_base
+from flask import Flask, redirect, render_template, url_for, request, flash, g, session, Blueprint
+import uuid
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-user_bp = Blueprint('admin', __name__)
-
-
-app.context_processor(inject_login)
+admin_bp = Blueprint('admin', __name__)
 
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
+app.context_processor(inject_login)
+app.register_blueprint(auth_bp)
 
+app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
 app.config.from_pyfile('config.cfg')
 
 Base = declarative_base()
@@ -37,14 +23,10 @@ Base = declarative_base()
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
-app.register_blueprint(auth_bp)
-
-
 @app.route('/init_app')
 def init_app():
     db.create_all()
-    active_admins = Users.query.filter(
-        Users.is_active == True, Users.is_admin == True).count()
+    active_admins = Users.query.filter(Users.is_active == True, Users.is_admin == True).count()
 
     if active_admins > 0:
         flash('Application is already set-up. Nothing to do')
@@ -53,13 +35,11 @@ def init_app():
     user_pass = UserPass()
     user_pass.get_random_user_password()
 
-    new_admin = Users(name=user_pass.user, email='noone@nowhere.no',
-                      password=user_pass.hash_password(), is_active=True, is_admin=True)  # type: ignore
+    new_admin = Users(name=user_pass.user, email='noone@nowhere.no', password=user_pass.hash_password(), is_active=True, is_admin=True)  # type: ignore
     db.session.add(new_admin)
     db.session.commit()
 
-    flash('User {} with password {} has been created'.format(
-        user_pass.user, user_pass.password))
+    flash(f'User {user_pass.user} with password {user_pass.password} has been created')
     return redirect(url_for('auth.index'))
 
 
@@ -792,7 +772,12 @@ def edit_room_section(room_section_id):
             create_seats_for_showtime(showtime.id)
 
         return redirect(url_for('room_section_base'))
-
+    
+@app.context_processor
+def inject_login():
+    login = UserPass(session.get('user')) # type: ignore
+    login.get_user_info()
+    return dict(login=login)
 
 def check_room_capacity_edit(room_section):
     room_id = room_section.room_id

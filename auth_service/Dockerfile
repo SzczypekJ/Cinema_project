@@ -1,10 +1,13 @@
 FROM python:3.9-slim
 
-WORKDIR /distrubuted-booking-app/auth_service
+WORKDIR /Cinema_project/auth_service
 
-COPY . /distrubuted-booking-app/auth_service
+# COPY ./auth_service /Cinema_project/auth_service
+COPY ./config.py /Cinema_project/auth_service/config.py
+COPY ./database.py /Cinema_project/auth_service/database.py
+COPY ./database_connection.py /Cinema_project/auth_service/database_connection.py
+COPY requirements.txt .
 
-# Instalacja narzędzi build-essential, gcc, i sqlite3
 RUN apt-get update && apt-get install -y \
     gcc \
     build-essential \
@@ -12,11 +15,10 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalacja zależności z requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000
 
-ENV FLASK_APP=auth_service.py
+ENV FLASK_APP=auth.py
 
-CMD ["flask", "run", "--host=0.0.0.0", "--port=8000"]
+CMD ["flask", "run", "--host=0.0.0.0", "--port=8000", "--debug"]
