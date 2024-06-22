@@ -3,9 +3,7 @@ FROM python:3.9-slim
 WORKDIR /Cinema_project/user_service
 
 COPY ./user_service /Cinema_project/user_service
-# COPY ./user_service/entrypoint.sh /opt
 COPY ./user_service/requirements.txt /Cinema_project/user_service/
-COPY ./database_connection.py /Cinema_project/user_service/
 
 # Instalacja narzędzi build-essential, gcc, i bibliotek potrzebnych do obsługi MySQL
 RUN apt-get update && apt-get install -y \

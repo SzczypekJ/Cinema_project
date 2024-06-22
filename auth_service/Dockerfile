@@ -4,7 +4,6 @@ WORKDIR /Cinema_project/auth_service
 
 COPY ./auth_service /Cinema_project/auth_service
 COPY ./auth_service/requirements.txt /Cinema_project/auth_service/
-COPY ./database_connection.py /Cinema_project/auth_service/
 
 # Instalacja narzędzi build-essential, gcc, i bibliotek potrzebnych do obsługi MySQL
 RUN apt-get update && apt-get install -y \
