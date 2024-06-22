@@ -21,4 +21,4 @@ EXPOSE 8003
 
 ENV FLASK_APP=user.py
 
-ENTRYPOINT ["/opt/entrypoint.sh"]
+CMD [ "flask", "run" ,"--host=0.0.0.0", "--port=8003" ]

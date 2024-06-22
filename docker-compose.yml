@@ -15,8 +15,6 @@ services:
     container_name: admin-service
     ports:
       - "8002:8000"
-    environment:
-      - FLASK_APP=admin
     depends_on:
       - auth-service
 
@@ -27,8 +25,6 @@ services:
     container_name: user-service
     ports:
       - "8003:8000"
-    environment:
-      - FLASK_APP=user
     depends_on:
       - auth-service
 

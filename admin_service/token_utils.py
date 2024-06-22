@@ -5,7 +5,6 @@ import binascii
 import uuid
 import random
 import string
-from admin import app, db
 
 
 class UserPass:
@@ -88,8 +87,4 @@ class UserPass:
             self.email = db_user.email
 
 
-@app.context_processor
-def inject_login():
-    login = UserPass(session.get('user')) # type: ignore
-    login.get_user_info()
-    return dict(login=login)
+

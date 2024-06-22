@@ -1,4 +1,4 @@
-from token_utils import UserPass, inject_login
+from token_utils import UserPass
 from database_connection import *
 import binascii
 import hashlib
@@ -17,11 +17,16 @@ from flask import Flask, redirect, render_template, url_for, request, flash, g, 
 import sys
 import os
 from token_utils import *
-from auth_service.auth import auth_bp
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 user_bp = Blueprint('user', __name__)
+
+@app.context_processor
+def inject_login():
+    login = UserPass(session.get('user'))  # type: ignore
+    login.get_user_info()
+    return dict(login=login)
 
 app.context_processor(inject_login)
 

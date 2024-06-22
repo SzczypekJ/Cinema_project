@@ -3,7 +3,7 @@ FROM python:3.9-slim
 WORKDIR /Cinema_project/admin_service
 
 COPY ./admin_service /Cinema_project/admin_service
-COPY ./admin_service/entrypoint.sh /opt
+# COPY ./admin_service/entrypoint.sh /opt
 COPY ./admin_service/requirements.txt /Cinema_project/admin_service/
 COPY ./database_connection.py /Cinema_project/admin_service/
 
@@ -22,4 +22,4 @@ EXPOSE 8002
 
 ENV FLASK_APP=admin.py
 
-ENTRYPOINT [ "/opt/entrypoint.sh" ]
+CMD [ "flask", "run" ,"--host=0.0.0.0", "--port=8002" ]
