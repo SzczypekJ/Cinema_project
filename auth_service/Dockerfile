@@ -3,7 +3,7 @@ FROM python:3.9-slim
 WORKDIR /Cinema_project/auth_service
 
 COPY ./auth_service /Cinema_project/auth_service
-COPY ./auth_service/entrypoint.sh /opt
+# COPY ./auth_service/entrypoint.sh /opt
 COPY ./auth_service/requirements.txt /Cinema_project/auth_service/
 COPY ./database_connection.py /Cinema_project/auth_service/
 # Instalacja narzędzi build-essential, gcc, i sqlite3
@@ -21,4 +21,4 @@ EXPOSE 8000
 
 ENV FLASK_APP=auth.py
 
-ENTRYPOINT [ "/opt/entrypoint.sh" ]
+CMD [ "flask", "run" ,"--host=0.0.0.0", "--port=8000" ]
