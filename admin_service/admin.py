@@ -21,7 +21,7 @@ from auth_service.auth import auth_bp
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-user_bp = Blueprint('admin', __name__)
+admin_bp = Blueprint('admin_bp', __name__)
 
 
 app.context_processor(inject_login)
@@ -37,7 +37,7 @@ Base = declarative_base()
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
-app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
 
 
 @app.route('/init_app')

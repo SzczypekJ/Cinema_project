@@ -10,8 +10,8 @@ services:
 
   admin-service:
     build:
-      context: ./admin_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./admin_service/Dockerfile
     container_name: admin-service
     ports:
       - "8002:8000"
@@ -22,8 +22,8 @@ services:
 
   user-service:
     build:
-      context: ./user_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./user_service/Dockerfile
     container_name: user-service
     ports:
       - "8003:8000"

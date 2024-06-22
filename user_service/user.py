@@ -23,7 +23,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 user_bp = Blueprint('user', __name__)
 
-
 app.context_processor(inject_login)
 
 app = Flask(__name__)
@@ -37,7 +36,7 @@ Base = declarative_base()
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
-app.register_blueprint(auth_bp)
+app.register_blueprint(user_bp)
 
 
 @app.route('/repertoire')
@@ -254,3 +253,7 @@ def calculate_amount(booking):
 
 def generate_transaction_id():
     return str(uuid.uuid4())
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8003)
