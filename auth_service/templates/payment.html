@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}
+Payment
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2>Payment for your booking</h2>
+                </div>
+                <div class="card-body">
+                    <p><strong>User Name:</strong> {{ user.name }}</p>
+                    <p><strong>User Email:</strong> {{ user.email }}</p>
+                    <p><strong>Movie:</strong> {{ booking.showtime.movie.title }}</p>
+                    <p><strong>Showtime:</strong> {{ booking.showtime.start_time }}</p>
+                    <p><strong>Seat:</strong> Row {{ booking.seat.row_number }}, Seat {{ booking.seat.seat_number }}</p>
+                    <p><strong>Status:</strong> {{ booking.status }}</p>
+
+                    <h4 class="mt-4">Choose your payment method:</h4>
+                    <form id="payment_form" action="{{ url_for('process_payment', booking_id=booking.id) }}"
+                        method="POST">
+                        <input type="hidden" name="payment_method" id="payment_method">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-primary"
+                                onclick="submitPayment('Credit card')">Credit card</button>
+                            <button type="button" class="btn btn-outline-primary"
+                                onclick="submitPayment('Blik')">Blik</button>
+                            <button type="button" class="btn btn-outline-primary"
+                                onclick="submitPayment('Voucher')">Voucher</button>
+                        </div>
+                    </form>
+
+                    <h4 class="mt-4">Time remaining to complete your booking:</h4>
+                    <div id="countdown" class="h5 text-danger"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function submitPayment(method) {
+        document.getElementById('payment_method').value = method;
+        document.getElementById('payment_form').submit();
+    }
+
+    function startCountdown(expiryTime) {
+        var countdownElement = document.getElementById('countdown');
+        var expiryDate = new Date(expiryTime).getTime();
+
+        var x = setInterval(function () {
+            var now = new Date().getTime();
+            var distance = expiryDate - now;
+
+            var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            countdownElement.innerHTML = minutes + "m " + seconds + "s ";
+
+            if (distance < 0) {
+                clearInterval(x);
+                countdownElement.innerHTML = "EXPIRED";
+                window.location.href = "{{ url_for('index') }}";
+                alert("You don't make a payment. Your booking is not valid");
+            }
+        }, 1000);
+    }
+
+    window.onload = function () {
+        var expiryTime = "{{ booking.expiry_time }}";
+        startCountdown(expiryTime);
+    };
+</script>
+{% endblock %}

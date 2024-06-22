@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}
+Room section base
+{% endblock %}
+
+{% block content %}
+<!-- Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">This entry will be deleted:</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="idDeleteModalBody">
+                ...
+            </div>
+            <form id="confirmDeleteForm" method="GET">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('.delete-confirm').click(function () {
+            var desc = $(this).attr('data-desc');
+            var url = $(this).attr('data-url');
+            $('#idDeleteModalBody').text(desc);
+            $('#confirmDeleteForm').attr("action", url);
+        });
+    });
+</script>
+
+<div class="container">
+    <table class="table">
+        <thead>
+            <th scope="col">Id</th>
+            <th scope="col">Room id</th>
+            <th scope="col">Section type</th>
+            <th scope="col">Capacity</th>
+            <th scope="col">Number of rows</th>
+            <th scope="col">Seats per row</th>
+            <th scope="col">Price multiplier</th>
+            <th scope="col">Start row</th>
+            <th scope="col">End row</th>
+        </thead>
+        <tbody>
+            {% for room_section in room_sections %}
+            <tr>
+                <th scope="row">{{ room_section.id }}</th>
+                <td>{{ room_section.room_id }}</td>
+                <td>{{ room_section.section_type }}</td>
+                <td>{{ room_section.capacity }}</td>
+                <td>{{ room_section.num_rows }}</td>
+                <td>{{ room_section.seats_per_row }}</td>
+                <td>{{ room_section.price_multiplier }}</td>
+                <td>{{ room_section.start_row }}</td>
+                <td>{{ room_section.end_row }}</td>
+                <td>
+                    <a href="{{ url_for('edit_room_section', room_section_id=room_section.id) }}"
+                        class="btn btn-success btn-sm" role="button">Edit...</a>
+                    <a type="button" class="btn btn-danger btn-sm delete-confirm" data-bs-toggle="modal"
+                        data-bs-target="#confirmDeleteModal"
+                        data-desc="{{ 'Delete room section {}?'.format(room_section.id) }}"
+                        data-url="{{ url_for('delete_room_section', room_section_id=room_section.id) }}">
+                        Delete
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
