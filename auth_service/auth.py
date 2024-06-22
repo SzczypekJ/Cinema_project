@@ -18,27 +18,27 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-app = Flask(__name__)
+auth_app = Flask(__name__)
 
-app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
-app.config.from_pyfile('config.cfg')
+auth_app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
+auth_app.config.from_pyfile('config.cfg')
 
 Base = declarative_base()
 
 db = SQLAlchemy(model_class=Base)
-db.init_app(app)
+db.init_app(auth_app)
 
 # Blueprint for authentication routes in our app
 auth_bp = Blueprint('auth_bp', __name__)
 
-@app.context_processor
+@auth_app.context_processor
 def inject_login():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
     return dict(login=login)
 
 
-app.context_processor(inject_login)
+auth_app.context_processor(inject_login)
 # Admin pass:
 # user name: dhg
 # user pass: hYk
@@ -47,7 +47,7 @@ app.context_processor(inject_login)
 
 def release_expired_bookings():
     while True:
-        with app.app_context():
+        with auth_app.app_context():
             print("Checking for expired bookings...")
             expired_bookings = Bookings.query.filter(
                 Bookings.expiry_time < datetime.now(),
@@ -125,14 +125,14 @@ def init_app():
     return redirect(url_for('index'))
 
 
-@app.route('/')
+@auth_app.route('/')
 def index():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
     return render_template('index.html', active_menu='home', login=login)
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@auth_app.route('/register', methods=['GET', 'POST'])
 def register():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -179,9 +179,9 @@ def register():
             return render_template('register.html', active_menu='register', user=user, login=login)
 
 
-app.register_blueprint(auth_bp)
+auth_app.register_blueprint(auth_bp)
 
 if __name__ == '__main__':
     release_thread = threading.Thread(target=release_expired_bookings)
     release_thread.start()
-    app.run(host='0.0.0.0', port=8000)
+    auth_app.run(host='0.0.0.0', port=8000)

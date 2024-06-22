@@ -22,29 +22,28 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 user_bp = Blueprint('user', __name__)
 
-@app.context_processor
+user_app = Flask(__name__)
+
+user_app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
+
+user_app.config.from_pyfile('config.cfg')
+
+Base = declarative_base()
+
+db = SQLAlchemy(model_class=Base)
+db.init_app(user_app)
+
+user_app.register_blueprint(user_bp)
+
+@user_app.context_processor
 def inject_login():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
     return dict(login=login)
 
-app.context_processor(inject_login)
+user_app.context_processor(inject_login)
 
-app = Flask(__name__)
-
-app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
-
-app.config.from_pyfile('config.cfg')
-
-Base = declarative_base()
-
-db = SQLAlchemy(model_class=Base)
-db.init_app(app)
-
-app.register_blueprint(user_bp)
-
-
-@app.route('/repertoire')
+@user_app.route('/repertoire')
 def repertoire():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -67,7 +66,7 @@ def repertoire():
                            movies_with_showtimes=movies_with_showtimes, user_id=user_id)
 
 
-@app.route('/your_account/<user_name>')
+@user_app.route('/your_account/<user_name>')
 def your_account(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -81,7 +80,7 @@ def your_account(user_name):
                            active_menu='your_account')
 
 
-@app.route('/edit_your_account/<user_name>', methods=['GET', 'POST'])
+@user_app.route('/edit_your_account/<user_name>', methods=['GET', 'POST'])
 def edit_your_account(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -121,7 +120,7 @@ def edit_your_account(user_name):
         return redirect(url_for('your_account'))
 
 
-@app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
+@user_app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
 def cancel_booking(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
@@ -143,7 +142,7 @@ def cancel_booking(booking_id):
     return redirect(url_for('your_account', user_name=session.get('user')))
 
 
-@app.route('/bookings/<int:user_id>/<int:showtime_id>', methods=['GET', 'POST'])
+@user_app.route('/bookings/<int:user_id>/<int:showtime_id>', methods=['GET', 'POST'])
 def bookings(user_id, showtime_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -199,7 +198,7 @@ def save_booking(user_id, showtime_id, seat_id, status):
     return new_booking.id
 
 
-@app.route('/payment/<int:booking_id>')
+@user_app.route('/payment/<int:booking_id>')
 def payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
@@ -214,7 +213,7 @@ def payment(booking_id):
     return render_template('payment.html', booking=booking, user=user)
 
 
-@app.route('/process_payment/<int:booking_id>', methods=['POST'])
+@user_app.route('/process_payment/<int:booking_id>', methods=['POST'])
 def process_payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
@@ -261,4 +260,4 @@ def generate_transaction_id():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8003)
+    user_app.run(host='0.0.0.0', port=8003)

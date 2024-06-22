@@ -22,29 +22,29 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 admin_bp = Blueprint('admin_bp', __name__)
 
-@app.context_processor
+admin_app = Flask(__name__)
+
+admin_app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
+
+admin_app.config.from_pyfile('config.cfg')
+
+Base = declarative_base()
+
+db = SQLAlchemy(model_class=Base)
+db.init_app(admin_app)
+
+admin_app.register_blueprint(admin_bp)
+
+@admin_app.context_processor
 def inject_login():
     login = UserPass(session.get('user')) # type: ignore
     login.get_user_info()
     return dict(login=login)
 
-app.context_processor(inject_login)
-
-app = Flask(__name__)
-
-app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
-
-app.config.from_pyfile('config.cfg')
-
-Base = declarative_base()
-
-db = SQLAlchemy(model_class=Base)
-db.init_app(app)
-
-app.register_blueprint(admin_bp)
+admin_app.context_processor(inject_login)
 
 
-@app.route('/init_app')
+@admin_app.route('/init_app')
 def init_app():
     db.create_all()
     active_admins = Users.query.filter(
@@ -67,7 +67,7 @@ def init_app():
     return redirect(url_for('auth.index'))
 
 
-@app.route('/user_status_change/<action>/<user_name>')
+@admin_app.route('/user_status_change/<action>/<user_name>')
 def user_status_change(action, user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -92,7 +92,7 @@ def user_status_change(action, user_name):
     return redirect(url_for('users'))
 
 
-@app.route('/users')
+@admin_app.route('/users')
 def users():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -105,7 +105,7 @@ def users():
     return render_template('users.html', active_menu='users', users=users, login=login)
 
 
-@app.route('/edit_user/<user_name>', methods=['GET', 'POST'])
+@admin_app.route('/edit_user/<user_name>', methods=['GET', 'POST'])
 def edit_user(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -146,7 +146,7 @@ def edit_user(user_name):
         return redirect(url_for('users'))
 
 
-@app.route('/delete_user/<user_name>')
+@admin_app.route('/delete_user/<user_name>')
 def delete_user(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -165,7 +165,7 @@ def delete_user(user_name):
     return redirect(url_for('users'))
 
 
-@app.route('/movie_base')
+@admin_app.route('/movie_base')
 def movie_base():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -178,7 +178,7 @@ def movie_base():
     return render_template('movie_base.html', active_menu='movie_base', movies=movies, login=login)
 
 
-@app.route('/edit_movie/<movie_title>', methods=['GET', 'POST'])
+@admin_app.route('/edit_movie/<movie_title>', methods=['GET', 'POST'])
 def edit_movie(movie_title):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -231,7 +231,7 @@ def edit_movie(movie_title):
         return redirect(url_for('movie_base'))
 
 
-@app.route('/delete_movie/<movie_title>')
+@admin_app.route('/delete_movie/<movie_title>')
 def delete_movie(movie_title):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -249,7 +249,7 @@ def delete_movie(movie_title):
     return redirect(url_for('movie_base'))
 
 
-@app.route('/add_new_movie', methods=['GET', 'POST'])
+@admin_app.route('/add_new_movie', methods=['GET', 'POST'])
 def add_new_movie():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -301,7 +301,7 @@ def add_new_movie():
             return render_template('add_new_movie.html', active_menu='add_new_movie', movie=movie, login=login)
 
 
-@app.route('/showtime_base')
+@admin_app.route('/showtime_base')
 def showtime_base():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -314,7 +314,7 @@ def showtime_base():
     return render_template('showtime_base.html', active_menu='showtime_base', showtimes=showtimes, login=login)
 
 
-@app.route('/edit_showtime/<showtime_id>', methods=['GET', 'POST'])
+@admin_app.route('/edit_showtime/<showtime_id>', methods=['GET', 'POST'])
 def edit_showtime(showtime_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -412,7 +412,7 @@ def create_seats_for_showtime(showtime_id):
     db.session.commit()
 
 
-@app.route('/delete_showtime/<showtime_id>')
+@admin_app.route('/delete_showtime/<showtime_id>')
 def delete_showtime(showtime_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -434,7 +434,7 @@ def delete_showtime(showtime_id):
     return redirect(url_for('showtime_base'))
 
 
-@app.route('/add_new_showtime', methods=['GET', 'POST'])
+@admin_app.route('/add_new_showtime', methods=['GET', 'POST'])
 def add_new_showtime():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -514,7 +514,7 @@ def add_new_showtime():
             return render_template('add_new_showtime.html', active_menu='add_new_showtime', showtime=showtime, login=login, movies=movies, rooms=rooms)
 
 
-@app.route('/your_account/<user_name>')
+@admin_app.route('/your_account/<user_name>')
 def your_account(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -528,7 +528,7 @@ def your_account(user_name):
                            active_menu='your_account')
 
 
-@app.route('/edit_your_account/<user_name>', methods=['GET', 'POST'])
+@admin_app.route('/edit_your_account/<user_name>', methods=['GET', 'POST'])
 def edit_your_account(user_name):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -568,7 +568,7 @@ def edit_your_account(user_name):
         return redirect(url_for('your_account'))
 
 
-@app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
+@admin_app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
 def cancel_booking(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
@@ -590,7 +590,7 @@ def cancel_booking(booking_id):
     return redirect(url_for('your_account', user_name=session.get('user')))
 
 
-@app.route('/room_base')
+@admin_app.route('/room_base')
 def room_base():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -604,7 +604,7 @@ def room_base():
                            login=login)
 
 
-@app.route('/edit_room_base/<int:room_id>', methods=['GET', 'POST'])
+@admin_app.route('/edit_room_base/<int:room_id>', methods=['GET', 'POST'])
 def edit_room_base(room_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -636,7 +636,7 @@ def edit_room_base(room_id):
         return redirect(url_for('room_base'))
 
 
-@app.route('/delete_room/<room_id>')
+@admin_app.route('/delete_room/<room_id>')
 def delete_room(room_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -653,7 +653,7 @@ def delete_room(room_id):
     return redirect(url_for('room_base'))
 
 
-@app.route('/add_new_room', methods=['GET', 'POST'])
+@admin_app.route('/add_new_room', methods=['GET', 'POST'])
 def add_new_room():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -688,7 +688,7 @@ def add_new_room():
             return render_template('add_new_room.html', active_menu='add_new_room', room=room, login=login)
 
 
-@app.route('/room_section_base')
+@admin_app.route('/room_section_base')
 def room_section_base():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -702,7 +702,7 @@ def room_section_base():
                            login=login)
 
 
-@app.route('/edit_room_section/<room_section_id>', methods=['GET', 'POST'])
+@admin_app.route('/edit_room_section/<room_section_id>', methods=['GET', 'POST'])
 def edit_room_section(room_section_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -810,7 +810,7 @@ def check_room_capacity_edit(room_section):
         return None
 
 
-@app.route('/delete_room_section/<room_section_id>')
+@admin_app.route('/delete_room_section/<room_section_id>')
 def delete_room_section(room_section_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -828,7 +828,7 @@ def delete_room_section(room_section_id):
     return redirect(url_for('room_section_base'))
 
 
-@app.route('/add_new_room_section', methods=['GET', 'POST'])
+@admin_app.route('/add_new_room_section', methods=['GET', 'POST'])
 def add_new_room_section():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -920,7 +920,7 @@ def check_room_capacity(room_section):
         return None
 
 
-@app.route('/bookings/<int:user_id>/<int:showtime_id>', methods=['GET', 'POST'])
+@admin_app.route('/bookings/<int:user_id>/<int:showtime_id>', methods=['GET', 'POST'])
 def bookings(user_id, showtime_id):
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
@@ -976,7 +976,7 @@ def save_booking(user_id, showtime_id, seat_id, status):
     return new_booking.id
 
 
-@app.route('/payment/<int:booking_id>')
+@admin_app.route('/payment/<int:booking_id>')
 def payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
@@ -991,7 +991,7 @@ def payment(booking_id):
     return render_template('payment.html', booking=booking, user=user)
 
 
-@app.route('/process_payment/<int:booking_id>', methods=['POST'])
+@admin_app.route('/process_payment/<int:booking_id>', methods=['POST'])
 def process_payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
@@ -1035,3 +1035,6 @@ def calculate_amount(booking):
 
 def generate_transaction_id():
     return str(uuid.uuid4())
+
+if __name__ == '__main__':
+    admin_app.run(host='0.0.0.0', port=8002)
