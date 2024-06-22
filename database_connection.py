@@ -12,10 +12,7 @@ app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
 
 app.config.from_pyfile('config.cfg')
 
-Base = declarative_base()
-
-db = SQLAlchemy(model_class=Base)
-db.init_app(app)
+db = SQLAlchemy(app)
 
 
 class ActiveSessions(db.Model):
@@ -146,4 +143,7 @@ class Payments(db.Model):
     payment_method = db.Column(String(50))
     transaction_id = db.Column(String(100))
     created_at = db.Column(DateTime, default=datetime.now)
-    
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
