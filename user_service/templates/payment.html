@@ -20,7 +20,7 @@ Payment
                     <p><strong>Status:</strong> {{ booking.status }}</p>
 
                     <h4 class="mt-4">Choose your payment method:</h4>
-                    <form id="payment_form" action="{{ url_for('user_app.process_payment', booking_id=booking.id) }}"
+                    <form id="payment_form" action="{{ url_for('process_payment', booking_id=booking.id) }}"
                         method="POST">
                         <input type="hidden" name="payment_method" id="payment_method">
                         <div class="d-grid gap-2">
