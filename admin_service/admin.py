@@ -1242,4 +1242,4 @@ def generate_transaction_id():
     return str(uuid.uuid4())
 
 if __name__ == '__main__':
-    admin_app.run(host='0.0.0.0', port=8002)
+    admin_app.run(host='0.0.0.0', port=8001)

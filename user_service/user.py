@@ -465,4 +465,4 @@ def generate_transaction_id():
 
 
 if __name__ == '__main__':
-    user_app.run(host='0.0.0.0', port=8003)
+    user_app.run(host='0.0.0.0', port=8002)

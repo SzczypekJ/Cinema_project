@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y \
 # Instalacja zależności z requirements.txt
 RUN pip install --no-cache-dir -r /Cinema_project/admin_service/requirements.txt
 
-EXPOSE 8002
+EXPOSE 8001
 
 ENV FLASK_APP=admin.py
 
-CMD [ "flask", "run" ,"--host=0.0.0.0", "--port=8002" ]
+CMD [ "flask", "run" ,"--host=0.0.0.0", "--port=8001" ]
