@@ -30,8 +30,6 @@ Base = declarative_base()
 db = SQLAlchemy(model_class=Base)
 db.init_app(admin_app)
 
-admin_app.register_blueprint(admin_bp)
-
 class ActiveSessions(db.Model):
     __tablename__ = 'ActiveSessions'
     id = db.Column(Integer, primary_key=True, autoincrement=True)
@@ -257,7 +255,7 @@ def init_app():
 
     if active_admins > 0:
         flash('Application is already set-up. Nothing to do')
-        return redirect(url_for('auth.index'))
+        return redirect("http://127.0.0.1:8000/")
 
     user_pass = UserPass()
     user_pass.get_random_user_password()
@@ -269,7 +267,7 @@ def init_app():
 
     flash('User {} with password {} has been created'.format(
         user_pass.user, user_pass.password))
-    return redirect(url_for('auth.index'))
+    return redirect("http://127.0.0.1:8000/")
 
 
 @admin_app.route('/user_status_change/<action>/<user_name>')
@@ -303,7 +301,7 @@ def users():
     login.get_user_info()
     if not login.is_valid or not login.is_admin:
         flash("You don't have an access to go to this page")
-        return redirect(url_for('auth.login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     users = Users.query.all()
 
@@ -376,7 +374,7 @@ def movie_base():
     login.get_user_info()
     if not login.is_valid or not login.is_admin:
         flash("You don't have an access to go to this page")
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     movies = Movies.query.all()
 
@@ -512,7 +510,7 @@ def showtime_base():
     login.get_user_info()
     if not login.is_valid or not login.is_admin:
         flash("You don't have an access to go to this page")
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     showtimes = Showtimes.query.all()
 
@@ -726,7 +724,7 @@ def your_account(user_name):
     user = Users.query.filter(Users.name == user_name).first()
     if not login.is_valid or not login.is_active or user is None:
         flash("You have to be logged in to see your account")
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     bookings = Bookings.query.filter_by(user_id=user.id).all()
     return render_template("your_account.html", login=login, user=user, bookings=bookings,
@@ -739,13 +737,13 @@ def edit_your_account(user_name):
     login.get_user_info()
     if not login.is_valid and not login.is_active:
         flash("Your login is not valid or your account is not active")
-        return redirect(url_for('index'))
+        return redirect("http://127.0.0.1:8000/")
 
     user = Users.query.filter(Users.name == user_name).first()
 
     if user == None:
         flash('No such user')
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     if request.method == "GET":
         return render_template("edit_your_account.html", active_menu='edit_your_account', login=login, user=user)
@@ -770,7 +768,7 @@ def edit_your_account(user_name):
             db.session.commit()
             flash('Password was changed')
 
-        return redirect(url_for('your_account'))
+        return redirect("http://127.0.0.1:8002/your_account")
 
 
 @admin_app.route('/cancel_booking/<int:booking_id>', methods=['POST'])
@@ -778,7 +776,7 @@ def cancel_booking(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
         flash("Booking not found")
-        return redirect(url_for('your_account', user_name=session.get('user')))
+        return redirect(url_for("http://127.0.0.1:8001/your_account/{session.get('user')}"))    
 
     payment = Payments.query.filter_by(booking_id=booking_id).first()
     if payment:
@@ -792,7 +790,7 @@ def cancel_booking(booking_id):
     db.session.commit()
 
     flash("Your booking has been cancelled.")
-    return redirect(url_for('your_account', user_name=session.get('user')))
+    return redirect(url_for("http://127.0.0.1:8001/your_account/{session.get('user')}"))
 
 
 @admin_app.route('/room_base')
@@ -801,7 +799,7 @@ def room_base():
     login.get_user_info()
     if not login.is_valid or not login.is_admin:
         flash("You don't have an access to go to this page")
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     rooms = Rooms.query.all()
 
@@ -899,7 +897,7 @@ def room_section_base():
     login.get_user_info()
     if not login.is_valid or not login.is_admin:
         flash("You don't have an access to go to this page")
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     room_sections = RoomSections.query.all()
 
@@ -1131,17 +1129,17 @@ def bookings(user_id, showtime_id):
     login.get_user_info()
     if not login.is_valid or not login.is_active:
         flash("You have to be logged in to book tickets")
-        return redirect(url_for('login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     current_user = Users.query.get(user_id)
     if not current_user:
         flash("User not found")
-        return redirect(url_for('index'))
+        return redirect("http://127.0.0.1:8000/")
 
     showtime = Showtimes.query.get(showtime_id)
     if not showtime:
         flash("Showtime not found")
-        return redirect(url_for('repertoire'))
+        return redirect("http://127.0.0.1:8002/repertoire")
 
     if request.method == 'POST':
         seat_id = request.form['seat']
@@ -1151,7 +1149,8 @@ def bookings(user_id, showtime_id):
             id=seat_id, showtime_id=showtime_id).first()
         if not seat or not seat.availability:
             flash("Selected seat is no longer available. Please choose another seat.")
-            return redirect(url_for('bookings', user_id=user_id, showtime_id=showtime_id))
+            return redirect(f"http://127.0.0.1:8001/bookings/{user_id}/{showtime_id}")
+        
 
         booking_id = save_booking(user_id, showtime_id, seat_id, status)
         flash("Booking successful!")
@@ -1186,12 +1185,12 @@ def payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
         flash("Booking not found")
-        return redirect(url_for('index'))
+        return redirect("http://127.0.0.1:8000/")
 
     user = Users.query.get(booking.user_id)
     if not user:
         flash("User not found")
-        return redirect(url_for('index'))
+        return redirect("http://127.0.0.1:8000/login")
 
     return render_template('payment.html', booking=booking, user=user)
 
@@ -1201,7 +1200,7 @@ def process_payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
         flash("Booking not found")
-        return redirect(url_for('index'))
+        return redirect("http://127.0.0.1:8000/")
 
     payment_method = request.form.get('payment_method')
     if not payment_method:
@@ -1221,7 +1220,7 @@ def process_payment(booking_id):
     db.session.commit()
 
     flash("Payment successful!")
-    return redirect(url_for('index'))
+    return redirect("http://127.0.0.1:8000/")
 
 
 def calculate_amount(booking):
@@ -1240,6 +1239,8 @@ def calculate_amount(booking):
 
 def generate_transaction_id():
     return str(uuid.uuid4())
+
+admin_app.register_blueprint(admin_bp, url_prefix='/admin')
 
 if __name__ == '__main__':
     admin_app.run(host='0.0.0.0', port=8001)
