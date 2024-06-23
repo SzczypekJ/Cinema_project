@@ -326,7 +326,7 @@ def edit_your_account(user_name):
             db.session.commit()
             flash('Password was changed')
 
-        return redirect(url_for('your_account'))
+        return redirect('http://127.0.0.1:8000/logout')
 
 
 @user_app.route('/cancel_booking/<int:booking_id>', methods=['POST'])

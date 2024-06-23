@@ -5,10 +5,12 @@
                 <a class="nav-link {{ 'active' if active_menu=='home' }}" aria-current="page"
                     href="http://127.0.0.1:8000/">Home </a>
             </li>
+            {% if login and login.is_valid %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='repertoire' }}" aria-current="page"
                     href="http://127.0.0.1:8002/repertoire">Repertoire</a>
             </li>
+            {% endif %}
             {% if login and login.is_admin %}
             <li class="nav-item">
                 <a class="nav-link {{ 'active' if active_menu=='movie_base' }}" aria-current="page"
@@ -69,8 +71,10 @@
                     Account
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    {% if login and login.is_valid %}
                     <li><a class="dropdown-item {{ 'active' if active_menu=='your_account' }}"
                             href="http://127.0.0.1:8002/your_account/{{ session['user'] }}">Your account</a></li>
+                    {% endif %}
                     <li><a class="dropdown-item {{ 'active' if active_menu=='login' }}"
                             href="http://127.0.0.1:8000/login">Login</a></li>
                     <li><a class="dropdown-item" href="http://127.0.0.1:8000/logout" tabindex="-1">Logout {{
