@@ -30,7 +30,6 @@ Base = declarative_base()
 db = SQLAlchemy(model_class=Base)
 db.init_app(user_app)
 
-user_app.register_blueprint(user_bp)
 
 class ActiveSessions(db.Model):
     __tablename__ = 'ActiveSessions'
@@ -161,6 +160,7 @@ class Payments(db.Model):
     transaction_id = db.Column(String(100))
     created_at = db.Column(DateTime, default=datetime.now)
 
+
 class UserPass:
     def __init__(self, user='', password=''):
         self.id = None
@@ -204,7 +204,8 @@ class UserPass:
             session['user'] = user_record.name
             session['session_id'] = str(uuid.uuid4())
             new_session = ActiveSessions(
-                user_id=user_record.id, session_id=session['session_id']) # type: ignore
+                # type: ignore
+                user_id=user_record.id, session_id=session['session_id'])
             db.session.add(new_session)
 
             user_record.is_active = True
@@ -240,13 +241,16 @@ class UserPass:
             self.is_active = db_user.is_active
             self.email = db_user.email
 
+
 @user_app.context_processor
 def inject_login():
     login = UserPass(session.get('user'))  # type: ignore
     login.get_user_info()
     return dict(login=login)
 
+
 user_app.context_processor(inject_login)
+
 
 @user_app.route('/repertoire')
 def repertoire():
@@ -278,7 +282,7 @@ def your_account(user_name):
     user = Users.query.filter(Users.name == user_name).first()
     if not login.is_valid or not login.is_active or user is None:
         flash("You have to be logged in to see your account")
-        return redirect(url_for('auth.login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     bookings = Bookings.query.filter_by(user_id=user.id).all()
     return render_template("your_account.html", login=login, user=user, bookings=bookings,
@@ -291,13 +295,13 @@ def edit_your_account(user_name):
     login.get_user_info()
     if not login.is_valid and not login.is_active:
         flash("Your login is not valid or your account is not active")
-        return redirect(url_for('auth.index'))
+        return redirect("http://127.0.0.1:8000/")
 
     user = Users.query.filter(Users.name == user_name).first()
 
     if user == None:
         flash('No such user')
-        return redirect(url_for('auth.login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     if request.method == "GET":
         return render_template("edit_your_account.html", active_menu='edit_your_account', login=login, user=user)
@@ -353,12 +357,12 @@ def bookings(user_id, showtime_id):
     login.get_user_info()
     if not login.is_valid or not login.is_active:
         flash("You have to be logged in to book tickets")
-        return redirect(url_for('auth.login'))
+        return redirect("http://127.0.0.1:8000/login")
 
     current_user = Users.query.get(user_id)
     if not current_user:
         flash("User not found")
-        return redirect(url_for('auth.index'))
+        return redirect("http://127.0.0.1:8000/")
 
     showtime = Showtimes.query.get(showtime_id)
     if not showtime:
@@ -408,12 +412,12 @@ def payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
         flash("Booking not found")
-        return redirect(url_for('auth.index'))
+        return redirect("http://127.0.0.1:8000/")
 
     user = Users.query.get(booking.user_id)
     if not user:
         flash("User not found")
-        return redirect(url_for('auth.index'))
+        return redirect("http://127.0.0.1:8000/")
 
     return render_template('payment.html', booking=booking, user=user)
 
@@ -423,7 +427,7 @@ def process_payment(booking_id):
     booking = Bookings.query.get(booking_id)
     if not booking:
         flash("Booking not found")
-        return redirect(url_for('auth.index'))
+        return redirect("http://127.0.0.1:8000/")
 
     payment_method = request.form.get('payment_method')
     if not payment_method:
@@ -443,7 +447,7 @@ def process_payment(booking_id):
     db.session.commit()
 
     flash("Payment successful!")
-    return redirect(url_for('auth.index'))
+    return redirect("http://127.0.0.1:8000/")
 
 
 def calculate_amount(booking):
@@ -463,6 +467,8 @@ def calculate_amount(booking):
 def generate_transaction_id():
     return str(uuid.uuid4())
 
+
+user_app.register_blueprint(user_bp, url_prefix='/user')
 
 if __name__ == '__main__':
     user_app.run(host='0.0.0.0', port=8002)

@@ -29,6 +29,7 @@ db.init_app(auth_app)
 # Blueprint for authentication routes in our app
 auth_bp = Blueprint('auth_bp', __name__)
 
+
 class ActiveSessions(db.Model):
     __tablename__ = 'ActiveSessions'
     id = db.Column(Integer, primary_key=True, autoincrement=True)
@@ -158,6 +159,7 @@ class Payments(db.Model):
     transaction_id = db.Column(String(100))
     created_at = db.Column(DateTime, default=datetime.now)
 
+
 class UserPass:
     def __init__(self, user='', password=''):
         self.id = None
@@ -201,7 +203,8 @@ class UserPass:
             session['user'] = user_record.name
             session['session_id'] = str(uuid.uuid4())
             new_session = ActiveSessions(
-                user_id=user_record.id, session_id=session['session_id']) # type: ignore
+                # type: ignore
+                user_id=user_record.id, session_id=session['session_id'])
             db.session.add(new_session)
 
             user_record.is_active = True
@@ -238,7 +241,6 @@ class UserPass:
             self.email = db_user.email
 
 
-
 @auth_app.context_processor
 def inject_login():
     login = UserPass(session.get('user'))  # type: ignore
@@ -250,7 +252,6 @@ auth_app.context_processor(inject_login)
 # Admin pass:
 # user name: dhg
 # user pass: hYk
-
 
 
 def release_expired_bookings():
@@ -288,7 +289,7 @@ def login():
         if login_record != None:
             session['user'] = user_name
             flash('Logon successful, welcome {}'.format(user_name))
-            return redirect(url_for('index'))
+            return redirect('http://127.0.0.1:8000/')
         else:
             flash('Logon failed, try again')
             return render_template('login.html', active_menu='login', login=login)
@@ -307,7 +308,7 @@ def logout():
 
         session.clear()
         flash('You are logged out')
-    return redirect(url_for('auth_bp.login'))
+    return redirect('http://127.0.0.1:8000/login')
 
 
 @auth_bp.route('/init_app')
@@ -318,7 +319,7 @@ def init_app():
 
     if active_admins > 0:
         flash('Application is already set-up. Nothing to do')
-        return redirect(url_for('index'))
+        return redirect('http://127.0.0.1:8000/')
 
     user_pass = UserPass()
     user_pass.get_random_user_password()
@@ -330,7 +331,7 @@ def init_app():
 
     flash('User {} with password {} has been created'.format(
         user_pass.user, user_pass.password))
-    return redirect(url_for('index'))
+    return redirect('http://127.0.0.1:8000/')
 
 
 @auth_app.route('/')
@@ -381,7 +382,7 @@ def register():
             db.session.commit()
 
             flash('User {} created'.format(user['user_name']))
-            return redirect(url_for('auth_bp.login'))
+            return redirect('http://127.0.0.1:8000/login')
         else:
             flash('Error: {}'.format(message))
             return render_template('register.html', active_menu='register', user=user, login=login)
