@@ -49,10 +49,10 @@ Payment
 
     function startCountdown(expiryTime) {
         var countdownElement = document.getElementById('countdown');
-        var expiryDate = new DateTime(expiryTime).getTime();
+        var expiryDate = new Date(expiryTime).getTime();
 
         var x = setInterval(function () {
-            var now = new DateTime().getTime();
+            var now = new Date().getTime();
             var distance = expiryDate - now;
 
             var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
