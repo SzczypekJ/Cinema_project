@@ -333,6 +333,7 @@ def init_app():
         user_pass.user, user_pass.password))
     return redirect('http://127.0.0.1:8000/')
 
+
 @auth_app.route('/')
 def index():
     login = UserPass(session.get('user'))  # type: ignore
