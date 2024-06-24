@@ -255,6 +255,7 @@ auth_app.context_processor(inject_login)
 
 
 def release_expired_bookings():
+    print("Thread started.")
     while True:
         with auth_app.app_context():
             print("Checking for expired bookings...")
@@ -333,6 +334,7 @@ def init_app():
         user_pass.user, user_pass.password))
     return redirect('http://127.0.0.1:8000/')
 
+
 @auth_app.route('/')
 def index():
     login = UserPass(session.get('user'))  # type: ignore
@@ -389,7 +391,7 @@ def register():
 
 auth_app.register_blueprint(auth_bp)
 
-if __name__ == '__main__':
-    release_thread = threading.Thread(target=release_expired_bookings)
-    release_thread.start()
-    auth_app.run(host='0.0.0.0', port=8000)
+# if __name__ == '__main__':
+#     release_thread = threading.Thread(target=release_expired_bookings)
+#     release_thread.start()
+#     auth_app.run(host='0.0.0.0', port=8000)
