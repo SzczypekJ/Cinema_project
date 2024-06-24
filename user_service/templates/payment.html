@@ -32,8 +32,7 @@ Payment
                                 onclick="submitPayment('Voucher')">Voucher</button>
                         </div>
                     </form>
-
-                    <h4 class="mt-4">Time remaining to complete your booking:</h4>
+                    <h4 class="mt-4">Time to complete your booking: 5 minutes</h4>
                     <div id="countdown" class="h5 text-danger"></div>
                 </div>
             </div>
@@ -64,7 +63,7 @@ Payment
                 clearInterval(x);
                 countdownElement.innerHTML = "EXPIRED";
                 window.location.href = "http://127.0.0.1:8000/";
-                alert("You don't make a payment. Your booking is not valid");
+                alert("You didn't make a payment. Your booking is invalid!");
             }
         }, 1000);
     }
