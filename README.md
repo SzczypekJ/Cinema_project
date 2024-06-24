@@ -10,8 +10,8 @@ The services communicate with each other through a shared database located on th
 
 ## Technologies
 - Backend: Python, Flask
-- Frontend: HTML, CSS, JavaScript
-- Database: MySQL
+- Frontend: HTML, CSS, JavaScript, Bootstrap
+- Database: MySQL, SQLAlchemy
 - Containerization: Docker
 - Server: AGH Server
 
@@ -38,3 +38,10 @@ The services communicate with each other through a shared database located on th
 1. Registration and Login: Users and administrators register and log in using the authorization service (auth_service).
 2. System Management by Administrator: If logged-in user is an admin he gets access to the admin service (admin_service) to manage the repertoire, rooms and reservations.
 3. Seat Reservation by Users: Logged-in users navigate to the user service (user_service) to browse the repertoire, select a show, and reserve seats.
+
+## Opening the Application in the Browser
+Once the application is running, open your web browser and navigate to:
+```
+http://127.0.0.1:8000/
+```
+You can copy and paste this URL into your web browser or click on it while holding `Ctrl` (Windows/Linux) or `Cmd` (Mac) and clicking the link.
