@@ -33,7 +33,6 @@ The services communicate with each other through a shared database located on th
 
 ```
     docker-compose up --build
-    Navigate to the frontend directory, install dependencies, and start the frontend:
 ```
 ## Usage
 1. Registration and Login: Users and administrators register and log in using the authorization service (auth_service).
