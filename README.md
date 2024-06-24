@@ -1,5 +1,5 @@
 # Cinema Seat Reservation System
-##Project Description
+## Project Description
 The cinema seat reservation system consists of three main services:
 
 1. Authorization Service (auth_service) - manages the user login and registration process.
