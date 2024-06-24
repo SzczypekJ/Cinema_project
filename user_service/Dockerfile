@@ -5,7 +5,6 @@ WORKDIR /Cinema_project/user_service
 COPY ./user_service /Cinema_project/user_service
 COPY ./user_service/requirements.txt /Cinema_project/user_service/
 
-# Instalacja narzędzi build-essential, gcc, i bibliotek potrzebnych do obsługi MySQL
 RUN apt-get update && apt-get install -y \
     gcc \
     build-essential \
@@ -13,7 +12,6 @@ RUN apt-get update && apt-get install -y \
     default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalacja zależności z requirements.txt
 RUN pip install --no-cache-dir -r /Cinema_project/user_service/requirements.txt
 
 EXPOSE 8002
