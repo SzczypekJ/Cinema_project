@@ -24,8 +24,8 @@ The services communicate with each other through a shared database located on th
 1. Clone the repository:
 
 ```
-    git clone https://github.com/your-username/cinema-seat-reservation-system.git
-    cd cinema-seat-reservation-system
+    git clone https://github.com/SzczypekJ/Cinema_project.git
+    cd Cinema_project
 ```
 2. Connect to AGH VPN.
 
