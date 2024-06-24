@@ -23,18 +23,18 @@ The services communicate with each other through a shared database located on th
 ### Installation
 1. Clone the repository:
 
-
+```
     git clone https://github.com/your-username/cinema-seat-reservation-system.git
     cd cinema-seat-reservation-system
-
+```
 2. Connect to AGH VPN.
 
 3. Build and start Docker containers :
 
-
+```
     docker-compose up --build
     Navigate to the frontend directory, install dependencies, and start the frontend:
-
+```
 ## Usage
 1. Registration and Login: Users and administrators register and log in using the authorization service (auth_service).
 2. System Management by Administrator: If logged-in user is an admin he gets access to the admin service (admin_service) to manage the repertoire, rooms and reservations.
