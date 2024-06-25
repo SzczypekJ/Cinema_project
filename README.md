@@ -24,7 +24,7 @@ The services communicate with each other through a shared database located on th
 1. Clone the repository:
 
 ```
-    git clone https://github.com/SzczypekJ/Cinema_project.git
+    git clone https://github.com/SzczypekJ/Cinema_project/tree/backup_2106
     cd Cinema_project
 ```
 2. Connect to AGH VPN.
