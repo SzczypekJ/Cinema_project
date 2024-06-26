@@ -1,5 +1,11 @@
-# Full project with dockerization you can find on the backup_2106 branch. There are also readme describing how to run the project. If you want to test the program itself, we recommend using the version without dockerization, which can be found in this branch (branch main)  
-  
+## Project Versions
+
+### Dockerized Version
+The full project with Docker support can be found on the `backup_2106` branch. This branch includes additional README files that describe how to run the project using Docker.
+
+### Non-Dockerized Version
+If you prefer to test the program without using Docker, we recommend using the version found in the `main` branch. This version does not require Docker and can be run directly on your local environment.
+
 # Cinema Booking System
 
 ## Overview
