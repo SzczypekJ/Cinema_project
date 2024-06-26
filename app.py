@@ -2,7 +2,7 @@ from flask import Flask, redirect, render_template, url_for, request, flash, g, 
 from datetime import date, timedelta
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy import Integer, String, Date, Text, Boolean, Float, DateTime
 from collections import defaultdict
 import threading
@@ -12,6 +12,25 @@ import random
 import string
 import hashlib
 import binascii
+import os
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
+
+base_dir = os.path.abspath(os.path.dirname(__file__))
+database_path = os.path.join(base_dir, 'data', 'cinema.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{database_path}'
+
+app.config.from_pyfile('config.cfg')
+
+Base = declarative_base()
+
+db = SQLAlchemy(model_class=Base)
+db.init_app(app)
+
+# Admin pass:
+# user name: dhg
+# user pass: hYk
 
 
 def release_expired_bookings():
@@ -30,22 +49,6 @@ def release_expired_bookings():
                 db.session.delete(booking)
             db.session.commit()
         time.sleep(60)
-
-
-app = Flask(__name__)
-
-app.config['SECRET_KEY'] = 'SomethingWhatNoOneWillGuess'
-
-app.config.from_pyfile('config.cfg')
-
-Base = declarative_base()
-
-db = SQLAlchemy(model_class=Base)
-db.init_app(app)
-
-# Admin pass:
-# user name: dhg
-# user pass: hYk
 
 
 class ActiveSessions(db.Model):
